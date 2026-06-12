@@ -39,6 +39,20 @@ class MailService
         return $this->send($data['claimant_email'], $data['claimant_name'], $subject, $body);
     }
 
+    public function sendPasswordReset(array $data): bool
+    {
+        $subject = 'Reset your FoundIt password';
+        $body = $this->render([
+            'Hi ' . $data['name'] . ',',
+            'We received a request to reset the password for your FoundIt account.',
+            'Open the link below to choose a new password (the link is valid for 30 minutes):',
+            $data['reset_link'],
+            "If you didn't request this, you can safely ignore this email — your password stays the same.",
+        ]);
+
+        return $this->send($data['email'], $data['name'], $subject, $body);
+    }
+
     private function send(string $toEmail, string $toName, string $subject, string $body): bool
     {
         if (!$this->isConfigured()) {

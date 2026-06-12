@@ -15,8 +15,10 @@ return function (App $app) {
     $app->group('/api', function ($group) {
 
         // ---------- PUBLIC ----------
-        $group->post('/register',  [AuthController::class, 'register']);
-        $group->post('/login',     [AuthController::class, 'login']);
+        $group->post('/register',         [AuthController::class, 'register']);
+        $group->post('/login',            [AuthController::class, 'login']);
+        $group->post('/forgot-password',  [AuthController::class, 'forgotPassword']);
+        $group->post('/reset-password',   [AuthController::class, 'resetPassword']);
         $group->get('/items',              [ItemController::class, 'index']);
         $group->get('/items/{id}',         [ItemController::class, 'show']);
         $group->get('/items/{id}/matches', [ItemController::class, 'matches']);
