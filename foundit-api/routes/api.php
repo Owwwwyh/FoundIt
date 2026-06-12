@@ -28,6 +28,7 @@ return function (App $app) {
             $g->post('/items',             [ItemController::class, 'store']);
             $g->put('/items/{id}',         [ItemController::class, 'update']);
             $g->delete('/items/{id}',      [ItemController::class, 'destroy']);
+            $g->post('/items/{id}/image',  [ItemController::class, 'uploadImage']);
 
             $g->get('/items/{id}/claims',  [ClaimController::class, 'index']);
             $g->post('/items/{id}/claims', [ClaimController::class, 'store']);
