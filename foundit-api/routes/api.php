@@ -17,8 +17,9 @@ return function (App $app) {
         // ---------- PUBLIC ----------
         $group->post('/register',  [AuthController::class, 'register']);
         $group->post('/login',     [AuthController::class, 'login']);
-        $group->get('/items',      [ItemController::class, 'index']);
-        $group->get('/items/{id}', [ItemController::class, 'show']);
+        $group->get('/items',              [ItemController::class, 'index']);
+        $group->get('/items/{id}',         [ItemController::class, 'show']);
+        $group->get('/items/{id}/matches', [ItemController::class, 'matches']);
 
         // ---------- PROTECTED (JWT required) ----------
         $group->group('', function ($g) {

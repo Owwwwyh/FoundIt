@@ -259,6 +259,89 @@ class ItemController
         return $this->json($response, ['items' => $stmt->fetchAll()], 200);
     }
 
+    // GET /api/items/{id}/matches   (public) — Feature #3: smart match suggestions.
+    // For a "lost" item, suggest open "found" items that look like the same thing
+    // (and vice versa), ranked by a simple relevance score.
+    public function matches(Request $request, Response $response, array $args): Response
+    {
+        $id  = (int) $args['id'];
+        $pdo = Database::pdo();
+
+        $stmt = $pdo->prepare('SELECT * FROM items WHERE id = ?');
+        $stmt->execute([$id]);
+        $source = $stmt->fetch();
+        if (!$source) {
+            return $this->json($response, ['error' => 'Item not found.'], 404);
+        }
+
+        // A lost item is matched against found items, and vice versa.
+        $opposite = $source['type'] === 'lost' ? 'found' : 'lost';
+
+        // Candidate pool: opposite type, still open, excluding this item itself.
+        $stmt = $pdo->prepare(
+            "SELECT i.*, u.name AS poster_name
+             FROM items i JOIN users u ON u.id = i.user_id
+             WHERE i.type = ? AND i.status = 'open' AND i.id <> ?"
+        );
+        $stmt->execute([$opposite, $id]);
+        $candidates = $stmt->fetchAll();
+
+        $sourceWords = $this->keywords($source['title'] . ' ' . ($source['description'] ?? ''));
+
+        $matches = [];
+        foreach ($candidates as $cand) {
+            $score   = 0;
+            $reasons = [];
+
+            // Same category is a strong signal.
+            if (strcasecmp(trim($source['category']), trim($cand['category'])) === 0) {
+                $score    += 3;
+                $reasons[] = 'Same category (' . $cand['category'] . ')';
+            }
+
+            // Shared keywords in the title/description.
+            $candWords = $this->keywords($cand['title'] . ' ' . ($cand['description'] ?? ''));
+            $shared    = array_values(array_intersect($sourceWords, $candWords));
+            if ($shared) {
+                $score    += 2 * count($shared);
+                $reasons[] = 'Mentions "' . implode('", "', array_slice($shared, 0, 3)) . '"';
+            }
+
+            // Same / overlapping location text.
+            if (array_intersect($this->keywords($source['location']), $this->keywords($cand['location']))) {
+                $score    += 1;
+                $reasons[] = 'Nearby location';
+            }
+
+            // Reported around the same time (within a week).
+            $apart = $this->daysApart($source['date_reported'], $cand['date_reported']);
+            if ($apart !== null && $apart <= 7) {
+                $score    += 1;
+                $reasons[] = 'Around the same date';
+            }
+
+            // Require more than a single coincidental signal (e.g. just being
+            // reported the same week): a real suggestion needs a category match,
+            // a shared keyword, or location + date together.
+            if ($score >= 2) {
+                $cand['match_score']   = $score;
+                $cand['match_reasons'] = $reasons;
+                $matches[] = $cand;
+            }
+        }
+
+        // Best score first; break ties by most recently posted.
+        usort($matches, function ($a, $b) {
+            return ($b['match_score'] <=> $a['match_score'])
+                ?: strcmp((string) $b['created_at'], (string) $a['created_at']);
+        });
+
+        return $this->json($response, [
+            'source'  => ['id' => (int) $source['id'], 'type' => $source['type']],
+            'matches' => array_slice($matches, 0, 5),
+        ], 200);
+    }
+
     // ---------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------
@@ -324,6 +407,45 @@ class ItemController
         if (is_file($full)) {
             @unlink($full);
         }
+    }
+
+    /**
+     * Break free text into a de-duplicated set of lowercase keywords,
+     * dropping very short tokens and common stop-words. Powers the
+     * smart match-suggestion scoring (Feature #3).
+     */
+    private function keywords(?string $text): array
+    {
+        $text  = mb_strtolower((string) $text);
+        $words = preg_split('/[^a-z0-9]+/u', $text, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        static $stop = ['the', 'and', 'for', 'with', 'near', 'around', 'somewhere', 'some',
+                        'this', 'that', 'has', 'have', 'had', 'was', 'from', 'your', 'you',
+                        'its', 'found', 'lost', 'left', 'item', 'about'];
+
+        $out = [];
+        foreach ($words as $w) {
+            if (mb_strlen($w) < 3 || in_array($w, $stop, true)) {
+                continue;
+            }
+            $out[$w] = true;   // key de-dupes
+        }
+        return array_keys($out);
+    }
+
+    /** Whole days between two dates, or null if either is missing/unparseable. */
+    private function daysApart(?string $d1, ?string $d2): ?int
+    {
+        if (!$d1 || !$d2) {
+            return null;
+        }
+        try {
+            $a = new \DateTime($d1);
+            $b = new \DateTime($d2);
+        } catch (\Throwable $e) {
+            return null;
+        }
+        return (int) floor(abs($a->getTimestamp() - $b->getTimestamp()) / 86400);
     }
 
     private function json(Response $r, array $data, int $status = 200): Response
