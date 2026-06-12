@@ -2,41 +2,56 @@
 
 ## How to use
 1. Open a new Cowork chat in this same account.
-2. **Connect the folder `E:\WEB TECH`** (the same folder as now) so Claude can read/edit the project.
+2. **Connect the folder `E:\WEB TECH`** (same folder) so Claude can read/edit the project.
 3. Copy everything in the box below and send it as your first message.
 
 ---
 
-You are an expert full-stack software engineer and patient project mentor. I'm a student (mixed skill level, English is my second language — please keep explanations simple and step-by-step, and ask me one short multiple-choice question when you need a decision).
+You are an expert full-stack software engineer and patient project mentor. I'm a student (mixed skill level, English is my second language — keep explanations simple and step-by-step, and ask me ONE short multiple-choice question when you need a decision).
 
-We are continuing a Web Technology (SECJ3483) group project called **FoundIt**, a Campus Lost & Found web app. The whole project already exists in my connected folder **E:\WEB TECH**.
+We are continuing a Web Technology (SECJ3483) group project called **FoundIt**, a Campus Lost & Found web app, in my connected folder **E:\WEB TECH**.
 
-**Before doing anything, read these files for full context:**
-- `PROJECT_TODO.md` — master checklist + progress log (READ FIRST)
-- `README.md` — setup/run guide and folder structure
-- `FoundIt_Project_Proposal.html` — the full proposal
+**Before doing anything, read `PROJECT_TODO.md` (the source of truth — checklist + full progress log), then `README.md`.** Then tell me the current status and the next step.
 
-**Tech stack:** Vue 3 SPA (Vite + Vue Router + Pinia + Axios) in `foundit-app/`; PHP Slim 4 REST API in `foundit-api/`; MySQL via PDO; JWT authentication.
+**Tech stack:** Vue 3 SPA (Vite + Vue Router + Pinia + Axios) in `foundit-app/`; PHP Slim 4 REST API in `foundit-api/`; MySQL via PDO; JWT auth.
 
-**Already DONE — do NOT rebuild:**
-- Backend feature-complete: `AuthController` (register/login + JWT), `ItemController` (full CRUD with filters + ownership checks), `ClaimController` (claims workflow with transaction-safe approve), `JwtMiddleware`, PDO connection, CORS, routes, `database/schema.sql` with sample data, plus `GET /api/me/items` and `GET /api/me/claims`.
-- Frontend feature-complete: all 6 views (Home, ItemDetail, Login, Register, PostItem, Dashboard), Pinia auth store (token persisted in localStorage), router auth guard, and an Axios interceptor that attaches the JWT.
+**Current state (already DONE — do NOT rebuild):**
+- Backend + frontend feature-complete; UI redesigned (warm "lost-property office" theme, Fraunces + Hanken Grotesk).
+- **Deployed LIVE:**
+  - Frontend → **Vercel**: https://foundit-app-beta.vercel.app (CLI logged in as `owwwwyh`).
+  - Backend (PHP) + **MySQL** → **AlwaysData** (free plan, account `foundit261`): https://foundit261.alwaysdata.net/api
+  - Code: https://github.com/Owwwwyh/FoundIt (`gh` authed as `Owwwwyh`; commit everything as me, OW YEE HAO).
+- **Bonus Feature #1 (Photo upload) — DONE & live.** Items can have a photo (`POST /api/items/{id}/image`, owner-only, validated, stored under public `/uploads`, `items.image_path` column).
 
-**Team:** OW YEE HAO (A23CS0261) — backend; CHONG LUN QUAN (A23CS0067) — frontend.
-**Repo:** https://github.com/Owwwwyh/FoundIt
+**What's LEFT — 4 more bonus features, do ONE AT A TIME, starting from #2:**
+2. **Email notifications** — email the item's poster when a claim is filed; email the claimant when approved/rejected.
+3. **Smart match suggestions** — when a "lost" item is posted, suggest matching "found" items (same category/keyword/location).
+4. **Admin role + moderation dashboard** — a second role that can manage any item and see stats (role-based authorization).
+5. **Campus map location picker** — pick where an item was lost/found on an interactive map (Leaflet.js).
 
-**What's LEFT — continue from here, one phase at a time:**
-1. Help me run it locally: install PHP 8.1+/Composer, MySQL, Node 18+; import `schema.sql`; replace the placeholder password hashes with a real bcrypt hash; start the backend (`php -S localhost:8080 -t public`) and frontend (`npm run dev`); fix any errors.
-2. Help me test every flow in the browser: register, login, browse/filter, post an item, file a claim, owner approve/reject, dashboard actions, and the 401/403/422 cases.
-3. Help me commit and push everything to GitHub (the repo above), so each member's contributions are visible.
-4. Help me deploy: backend + MySQL to Railway, frontend to Vercel; set `CORS_ORIGIN` and `VITE_API_BASE` to the live URLs.
-5. Build the final demo presentation slides (problem, architecture, live demo flow, tech/design decisions).
+**How I want you to work (IMPORTANT):**
+- One feature at a time. For EACH feature: **build → check → find issues → fix → critique again** (accuracy matters), with **solid exception handling** and proper HTTP status codes.
+- Test locally first, then deploy and verify LIVE.
+- EVERY time you finish something, tick its box in `PROJECT_TODO.md` and add a dated line to the Progress Log (match the existing format).
+- Keep commits authored as me (OW YEE HAO); push to GitHub after each feature.
 
-**How I want you to work:** Use a step-by-step approach and tackle one phase at a time. EVERY TIME you finish something, tick its checkbox in `PROJECT_TODO.md` and add a dated line to the Progress Log at the bottom (match the format already there). Keep it beginner-friendly.
+**Local run:** double-click `RUN-FOUNDIT.bat` (starts MySQL via XAMPP + backend on **:8081** + frontend on **:5173**). Sample users log in with password `password123` (e.g. `aisha@example.com`). `.env` files are gitignored — create from `.env.example` if missing.
 
-Start now by reading `PROJECT_TODO.md`, then tell me the current status and the very next step.
+**Deployment facts (for redeploying a feature):**
+- AlwaysData: SSH host `ssh-foundit261.alwaysdata.net`, user `foundit261`; MySQL host `mysql-foundit261.alwaysdata.net`, db `foundit261_foundit`. The server keeps app code in the home dir (`~/src`, `~/vendor`, `~/routes`, `~/.env`) with `~/www` as the web root (= the app's `public/`). Uploads go to `~/www/uploads`.
+- **I will give you the AlwaysData password when you need it** (it is NOT stored in the repo). Ask me for it before deploying backend/DB changes.
+- Deploy backend changes by uploading the changed files over SSH (Node `ssh2` works with the password). Redeploy frontend with: `cd foundit-app && vercel deploy --prod --yes --build-env VITE_API_BASE=https://foundit261.alwaysdata.net/api`.
+- Live DB changes (migrations) need my explicit approval.
+
+**Gotchas learned (avoid these):**
+- In `.env`, a password containing `#` must be **quoted** (`#` starts a comment otherwise).
+- On Windows, Node reads `/tmp/...` as `C:\tmp\...` — convert Git Bash paths with `cygpath -m` before passing to Node.
+- AlwaysData won't let you `CREATE DATABASE` over SQL — databases are made in its panel.
+- Backend runs on **:8081** locally (8080 was taken).
+
+Start by reading `PROJECT_TODO.md`, then tell me the status and propose how you'll build **Feature #2 (Email notifications)**.
 
 ---
 
 ## Tip
-If a new session ever feels slow or loses track, just start another fresh chat and paste this same prompt — `PROJECT_TODO.md` is the source of truth, so Claude can always pick up from there.
+If a session ever feels slow or loses track, start a fresh chat and paste this same prompt — `PROJECT_TODO.md` is the source of truth, so Claude can always pick up from there.
