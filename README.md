@@ -10,6 +10,40 @@ A full-stack single-page web app for SECJ3483 Web Technology.
 
 Frontend hosted on **Vercel** · backend + **MySQL** on **AlwaysData**.
 
+## ✨ Features
+
+**Core**
+- 🔐 **Accounts & auth** — register / log in, JWT-protected routes, bcrypt-hashed passwords
+- 📋 **Post lost & found items** — title, category, location, date, description
+- 🔎 **Browse & filter** — keyword search + filter by type (lost/found), category and status
+- 🙋 **Claims workflow** — file a claim with proof; the poster approves/rejects. Approving resolves the item and auto-rejects the other pending claims (transaction-safe)
+- 📊 **Dashboard** — manage the items you posted and track the claims you filed
+
+**Bonus**
+- 📷 **Photo upload** — attach a photo per item (JPG/PNG/WEBP/GIF, 2 MB; real image-type validation, owner-only)
+- 📧 **Email notifications** — poster is emailed when a claim is filed; claimant is emailed when it's approved/rejected (PHPMailer + SMTP — set `MAIL_*` in `.env`; gracefully skipped if unconfigured)
+- 🤝 **Smart match suggestions** — opening a *lost* item suggests likely matching *found* items (and vice versa), ranked by category, shared keywords, location and date
+
+## API endpoints
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| POST | `/api/register` | – | Create an account |
+| POST | `/api/login` | – | Log in, returns a JWT |
+| GET | `/api/items` | – | List items (`?type=`, `?category=`, `?status=`, `?search=`) |
+| GET | `/api/items/{id}` | – | One item |
+| GET | `/api/items/{id}/matches` | – | Smart match suggestions *(bonus #3)* |
+| POST | `/api/items` | JWT | Create an item |
+| PUT | `/api/items/{id}` | JWT (owner) | Edit / mark resolved |
+| DELETE | `/api/items/{id}` | JWT (owner) | Delete an item |
+| POST | `/api/items/{id}/image` | JWT (owner) | Upload / replace the photo *(bonus #1)* |
+| GET | `/api/items/{id}/claims` | JWT (owner) | List claims on my item |
+| POST | `/api/items/{id}/claims` | JWT | File a claim *(emails the poster — bonus #2)* |
+| PUT | `/api/claims/{id}` | JWT (owner) | Approve / reject *(emails the claimant — bonus #2)* |
+| DELETE | `/api/claims/{id}` | JWT (claimant) | Withdraw my claim |
+| GET | `/api/me/items` | JWT | Items I posted |
+| GET | `/api/me/claims` | JWT | Claims I filed |
+
 ## What's in this folder
 
 ```
@@ -37,10 +71,10 @@ WEB TECH/
         ├── api/http.js             # axios + JWT interceptor (wired)
         ├── store/auth.js           # auth/token state (wired)
         ├── router/index.js         # routes + auth guard (wired)
-        └── views/                  # Home, Login (examples) + Register, ItemDetail, PostItem, Dashboard (stubs)
+        └── views/                  # Home, Login, Register, ItemDetail, PostItem, Dashboard
 ```
 
-The "wired" files already work. Each member fills the `TODO (M1)…(M4)` markers.
+All views and API endpoints are implemented, tested, and deployed live.
 
 ## Setup & run
 
@@ -90,7 +124,7 @@ Open http://localhost:5173.
 3. **M2:** `GET /api/items` returns the seeded items.
 4. **M3:** log in from the UI → navbar shows protected links. **← key milestone.**
 5. **M2 + M4:** full CRUD + claims workflow.
-6. Deploy: backend + MySQL to Railway, frontend to Vercel.
+6. Deploy: backend + MySQL to AlwaysData, frontend to Vercel.
 
 ## Demo testing checklist
 - [ ] Register → log in → token stored
@@ -100,4 +134,7 @@ Open http://localhost:5173.
 - [ ] `POST /api/items` with no token → **401**
 - [ ] Edit someone else's item → **403**
 - [ ] Invalid form → **422** with messages
+- [ ] Upload a photo to an item → shows on the card and detail page *(bonus #1)*
+- [ ] File a claim → poster receives an email; approve/reject → claimant receives one *(bonus #2, needs SMTP in `.env`)*
+- [ ] Open a lost item → "Possible matches" lists likely found items *(bonus #3)*
 - [ ] Works at the live public URL
