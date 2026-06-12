@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import http, { imageUrl } from '../api/http'
 import { useAuthStore } from '../store/auth'
@@ -11,6 +11,7 @@ const item = ref(null)
 const loading = ref(true)
 const error = ref('')
 const claims = ref([])
+const matches = ref([])
 
 const claimMessage = ref('')
 const claimError = ref('')
@@ -29,9 +30,11 @@ function formatDate(d) {
 async function load() {
   loading.value = true
   error.value = ''
+  matches.value = []
   try {
     const { data } = await http.get(`/items/${route.params.id}`)
     item.value = data.item
+    loadMatches()
     if (isOwner.value) await loadClaims()
   } catch (e) {
     error.value = 'Item not found.'
@@ -45,6 +48,13 @@ async function loadClaims() {
     const { data } = await http.get(`/items/${route.params.id}/claims`)
     claims.value = data.claims || []
   } catch (e) { /* not owner / none */ }
+}
+
+async function loadMatches() {
+  try {
+    const { data } = await http.get(`/items/${route.params.id}/matches`)
+    matches.value = data.matches || []
+  } catch (e) { /* suggestions are optional — never block the page */ }
 }
 
 async function submitClaim() {
@@ -73,6 +83,9 @@ async function review(claim, status) {
 }
 
 onMounted(load)
+// Re-fetch when navigating between item pages (e.g. clicking a match card) —
+// Vue reuses this component, so onMounted alone won't fire again.
+watch(() => route.params.id, load)
 </script>
 
 <template>
@@ -149,6 +162,30 @@ onMounted(load)
         </div>
       </div>
     </aside>
+
+    <!-- Smart match suggestions (Feature #3) -->
+    <section v-if="matches.length" class="matches">
+      <div class="matches-head">
+        <h2>Possible matches</h2>
+        <p class="muted small">
+          {{ item.type === 'lost' ? 'Found items' : 'Lost reports' }} that might be the same thing.
+        </p>
+      </div>
+      <div class="match-grid">
+        <router-link v-for="m in matches" :key="m.id" :to="`/items/${m.id}`" class="match-card">
+          <img v-if="m.image_path" :src="imageUrl(m.image_path)" :alt="m.title" class="match-thumb" loading="lazy" />
+          <div v-else class="match-thumb match-thumb--empty" aria-hidden="true">🔍</div>
+          <div class="match-body">
+            <span class="badge" :class="m.type">{{ m.type }}</span>
+            <h4>{{ m.title }}</h4>
+            <p class="match-loc">{{ m.category }} · {{ m.location }}</p>
+            <div class="match-why">
+              <span v-for="(r, i) in m.match_reasons" :key="i" class="why-pill">{{ r }}</span>
+            </div>
+          </div>
+        </router-link>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -183,6 +220,24 @@ onMounted(load)
 .detail-skel{ height:300px; border-radius:var(--r); background:var(--card); border:1px solid var(--line); animation:pulse 1.4s infinite; }
 @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.55; } }
 .err.big{ font-size:1.05rem; }
+
+/* Smart match suggestions (Feature #3) */
+.matches{ grid-column:1 / -1; margin-top:10px; padding-top:24px; border-top:1px solid var(--line); }
+.matches-head{ margin-bottom:15px; }
+.matches-head h2{ margin:0 0 2px; }
+.match-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(248px, 1fr)); gap:14px; }
+.match-card{ display:flex; gap:13px; padding:13px; background:var(--card); border:1px solid var(--line);
+  border-radius:14px; box-shadow:var(--shadow-sm); transition:border-color .15s, transform .15s; }
+.match-card:hover{ border-color:var(--brand); transform:translateY(-2px); }
+.match-thumb{ width:74px; height:74px; flex:none; object-fit:cover; border-radius:11px; border:1px solid var(--line); }
+.match-thumb--empty{ display:grid; place-items:center; font-size:1.7rem; background:var(--paper); }
+.match-body{ min-width:0; }
+.match-body .badge{ margin-bottom:6px; }
+.match-body h4{ margin:0 0 3px; font-size:1rem; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.match-loc{ color:var(--ink-2); font-size:.82rem; margin:0 0 9px; }
+.match-why{ display:flex; flex-wrap:wrap; gap:5px; }
+.why-pill{ background:var(--brand-100); color:var(--brand-700); font-size:.72rem; font-weight:600;
+  padding:2px 9px; border-radius:999px; }
 
 @media (max-width:820px){
   .detail{ grid-template-columns:1fr; }
