@@ -14,6 +14,7 @@ namespace App\Controllers;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 use App\Database;
+use App\Services\MailService;
 
 class ClaimController
 {
@@ -87,7 +88,10 @@ class ClaimController
         );
         $stmt->execute([$itemId, $userId, $message]);
 
-        return $this->fetchOne($response, (int) $pdo->lastInsertId(), 201);
+        $claimId = (int) $pdo->lastInsertId();
+        $this->notifyClaimFiled($claimId);
+
+        return $this->fetchOne($response, $claimId, 201);
     }
 
     // PUT /api/claims/{id}   (JWT, item owner approves/rejects)
@@ -121,6 +125,15 @@ class ClaimController
             ], 422);
         }
 
+        $autoRejectedClaimIds = [];
+        if ($status === 'approved') {
+            $stmt = $pdo->prepare(
+                "SELECT id FROM claims WHERE item_id = ? AND id <> ? AND status = 'pending'"
+            );
+            $stmt->execute([$claim['item_id'], $claimId]);
+            $autoRejectedClaimIds = array_map('intval', array_column($stmt->fetchAll(), 'id'));
+        }
+
         // Use a transaction so the claim + item + sibling claims stay consistent
         try {
             $pdo->beginTransaction();
@@ -142,6 +155,11 @@ class ClaimController
         } catch (\Throwable $e) {
             $pdo->rollBack();
             throw $e;   // handled by Slim's error middleware -> 500
+        }
+
+        $this->notifyClaimReviewed($claimId, $status);
+        foreach ($autoRejectedClaimIds as $autoRejectedClaimId) {
+            $this->notifyClaimReviewed($autoRejectedClaimId, 'rejected');
         }
 
         return $this->fetchOne($response, $claimId, 200);
@@ -192,6 +210,50 @@ class ClaimController
         );
         $stmt->execute([$id]);
         return $this->json($response, ['claim' => $stmt->fetch()], $status);
+    }
+
+    private function notifyClaimFiled(int $claimId): void
+    {
+        try {
+            $data = $this->claimNotificationData($claimId);
+            if ($data) {
+                (new MailService())->sendClaimFiled($data);
+            }
+        } catch (\Throwable $e) {
+            error_log('FoundIt claim-filed email error: ' . $e->getMessage());
+        }
+    }
+
+    private function notifyClaimReviewed(int $claimId, string $status): void
+    {
+        try {
+            $data = $this->claimNotificationData($claimId);
+            if ($data) {
+                $data['status'] = $status;
+                (new MailService())->sendClaimReviewed($data);
+            }
+        } catch (\Throwable $e) {
+            error_log('FoundIt claim-reviewed email error: ' . $e->getMessage());
+        }
+    }
+
+    private function claimNotificationData(int $claimId): ?array
+    {
+        $stmt = Database::pdo()->prepare(
+            'SELECT c.message AS claim_message,
+                    i.title AS item_title, i.type AS item_type, i.location AS item_location,
+                    owner.name AS owner_name, owner.email AS owner_email,
+                    claimant.name AS claimant_name, claimant.email AS claimant_email
+             FROM claims c
+             JOIN items i ON i.id = c.item_id
+             JOIN users owner ON owner.id = i.user_id
+             JOIN users claimant ON claimant.id = c.user_id
+             WHERE c.id = ?'
+        );
+        $stmt->execute([$claimId]);
+        $data = $stmt->fetch();
+
+        return $data ?: null;
     }
 
     private function json(Response $r, array $data, int $status = 200): Response
