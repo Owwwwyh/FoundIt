@@ -65,11 +65,13 @@
 - [x] Basic responsive styling across pages
 
 ### Phase 3 — Integration & deployment — *both*
-- [ ] Connect frontend to backend (fix CORS, set env URLs)
-- [ ] Deploy backend + MySQL to Railway
-- [ ] Deploy frontend to Vercel
-- [ ] Seed the live database
-- [ ] Point `CORS_ORIGIN` and `VITE_API_BASE` to the live URLs
+- [x] Connect frontend to backend (fix CORS, set env URLs)
+- [x] Deploy backend + MySQL to ~~Railway~~ **AlwaysData** *(Railway dropped its free tier; AlwaysData is free + real MySQL + HTTPS + SSH)*
+- [x] Deploy frontend to Vercel
+- [x] Seed the live database
+- [x] Point `CORS_ORIGIN` and `VITE_API_BASE` to the live URLs
+
+**🌐 Live URLs:** frontend → https://foundit-app-beta.vercel.app · backend → https://foundit261.alwaysdata.net/api
 
 ### Phase 4 — Finish — *both*
 - [ ] Run the full Demo Testing Checklist (`README.md`)
@@ -108,3 +110,4 @@ After that, each member commits their own work so contributions show up per pers
 - **2026-06-12 — Claude:** Got the app **running locally** (both). Installed Composer (as `foundit-api/composer.phar`); ran `composer install` (backend) and `npm install` (frontend). Found a running MariaDB 10.4 (XAMPP) on 127.0.0.1:3306 with root/no-password — imported `database/schema.sql` (3 users, 4 items, 2 claims) and replaced the placeholder password hashes with a real bcrypt hash (all sample users now log in with **password123**). Created both `.env` files (generated a JWT secret). **Note:** port 8080 was already taken by another local service, so the backend now runs on **:8081** (frontend `.env` updated to match). Verified: `GET /api/items` returns DB JSON (200), login returns a JWT (200) and a bad password returns 401. Backend → http://localhost:8081/api, frontend → http://localhost:5173.
 - **2026-06-12 — Claude:** **Redesigned the whole frontend UI** (CHONG) from the raw default styling into a polished, cohesive "lost-property office" theme — warm cream canvas, deep-teal + marigold palette, an editorial serif (Fraunces) paired with a clean grotesque (Hanken Grotesk), a full design-system in `App.vue` (buttons, badges, status pills, inputs, cards, tabs), a sticky translucent navbar with brand mark, ambient background + grain texture, and per-page polish: Home hero + segmented Lost/Found filter + loading skeletons + empty states; two-column Item Detail with claim/owner panels; chip-style report form; centered auth cards (with a demo-login hint); card-based Dashboard. **No app logic changed** — only templates + styles. Verified in-browser via the preview tool (Home, Login render correctly, live data loads, no horizontal overflow). Added one-click launcher scripts (`RUN-FOUNDIT.bat`, `START-MYSQL.bat`, `start-backend.bat`, `start-frontend.bat`) so the servers run persistently for the demo.
 - **2026-06-12 — Claude:** **Code review + pushed to GitHub** (OW). Reviewed the whole codebase — backend is solid (input validation, bcrypt, JWT 401, ownership 403, prepared statements, transaction-safe approve; no functional bugs found). Fixes applied: added the missing `foundit-app/.gitignore` + a root `.gitignore` (so `node_modules`, `vendor`, `.env`, `composer.phar`, `.claude/` are never committed); baked a real bcrypt hash into `schema.sql` so sample users log in with `password123` straight after import (removed the fragile manual hash step); made API error detail output env-driven via `APP_DEBUG` (off by default — no stack-trace leaks in production); fixed the `VITE_API_BASE` fallback and the README/`.env.example` port references to `:8081`. Initialized git and pushed **3 logical commits** (docs → backend → frontend, all authored by OW) to https://github.com/Owwwwyh/FoundIt — 38 source files, no dependencies or secrets.
+- **2026-06-12 — Claude:** **Deployed the whole app live** (Phase 3, both). Backend + MySQL on **AlwaysData** (free, real MySQL, HTTPS, SSH — chosen because Railway dropped its free tier): created the `foundit261_foundit` database, seeded it via external MySQL, uploaded the Slim app over SSH (code kept above the web root for security, `public/` as docroot), and added a production `.htaccess`. Hit + fixed a real bug: the DB password contains `#`, which `.env` treats as a comment — fixed by quoting it. Frontend on **Vercel** (`vite build`, `VITE_API_BASE` baked to the live API). Set `CORS_ORIGIN` to the Vercel origin and verified the cross-origin header. **Live:** frontend https://foundit-app-beta.vercel.app, backend https://foundit261.alwaysdata.net/api — items, login (JWT), and 401 all verified live over HTTPS.

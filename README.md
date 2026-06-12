@@ -3,6 +3,13 @@
 A full-stack single-page web app for SECJ3483 Web Technology.
 **Stack:** Vue.js SPA · PHP Slim REST API · MySQL (PDO) · JWT auth.
 
+## 🌐 Live demo
+- **App:** https://foundit-app-beta.vercel.app
+- **API:** https://foundit261.alwaysdata.net/api
+- **Login:** `aisha@example.com` / `password123` (sample users)
+
+Frontend hosted on **Vercel** · backend + **MySQL** on **AlwaysData**.
+
 ## What's in this folder
 
 ```
