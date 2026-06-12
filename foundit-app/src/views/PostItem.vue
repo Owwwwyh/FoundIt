@@ -173,8 +173,8 @@ async function submit() {
 .file-input::file-selector-button{ font-family:var(--font-body); font-weight:600; font-size:.85rem; cursor:pointer;
   border:1px solid var(--line-2); background:var(--card); color:var(--ink); padding:7px 12px; border-radius:8px; margin-right:12px; }
 .img-preview{ margin-top:12px; display:flex; align-items:flex-end; gap:14px; }
-.img-preview img{ width:140px; height:140px; object-fit:cover; border-radius:12px; border:1px solid var(--line);
-  box-shadow:var(--shadow-sm); }
+.img-preview img{ width:140px; height:140px; object-fit:contain; background:var(--paper-2); border-radius:12px;
+  border:1px solid var(--line); box-shadow:var(--shadow-sm); }
 .btn-submit{ margin-top:6px; padding:13px; }
 @media (max-width:520px){ .grid-2{ grid-template-columns:1fr; } }
 </style>

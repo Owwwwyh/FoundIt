@@ -194,8 +194,8 @@ watch(() => route.params.id, load)
 .back:hover{ color:var(--brand); }
 .detail{ display:grid; grid-template-columns:1.6fr 1fr; gap:22px; align-items:start; }
 .detail-main h1{ margin:16px 0 20px; }
-.item-photo{ width:100%; max-height:380px; object-fit:cover; border-radius:14px; border:1px solid var(--line);
-  box-shadow:var(--shadow-sm); margin:0 0 22px; display:block; }
+.item-photo{ width:100%; height:340px; object-fit:contain; background:var(--paper-2); border-radius:14px;
+  border:1px solid var(--line); box-shadow:var(--shadow-sm); margin:0 0 22px; display:block; }
 .facts{ display:flex; flex-wrap:wrap; gap:10px; margin:0 0 22px; }
 .fact{ background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:10px 15px; min-width:118px; }
 .fact-k{ display:block; font-size:.7rem; text-transform:uppercase; letter-spacing:.6px; color:var(--ink-2); font-weight:700; margin-bottom:3px; }
@@ -229,7 +229,7 @@ watch(() => route.params.id, load)
 .match-card{ display:flex; gap:13px; padding:13px; background:var(--card); border:1px solid var(--line);
   border-radius:14px; box-shadow:var(--shadow-sm); transition:border-color .15s, transform .15s; }
 .match-card:hover{ border-color:var(--brand); transform:translateY(-2px); }
-.match-thumb{ width:74px; height:74px; flex:none; object-fit:cover; border-radius:11px; border:1px solid var(--line); }
+.match-thumb{ width:74px; height:74px; flex:none; object-fit:contain; background:var(--paper-2); border-radius:11px; border:1px solid var(--line); }
 .match-thumb--empty{ display:grid; place-items:center; font-size:1.7rem; background:var(--paper); }
 .match-body{ min-width:0; }
 .match-body .badge{ margin-bottom:6px; }

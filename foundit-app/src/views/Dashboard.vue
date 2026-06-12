@@ -114,7 +114,7 @@ onMounted(loadAll)
 .tab.active .tab-count{ background:var(--brand-100); color:var(--brand-700); }
 .dash-row{ align-items:center; }
 .dash-info{ min-width:0; flex:1; }
-.dash-thumb{ width:54px; height:54px; object-fit:cover; border-radius:10px; border:1px solid var(--line); flex-shrink:0; }
+.dash-thumb{ width:54px; height:54px; object-fit:contain; background:var(--paper-2); border-radius:10px; border:1px solid var(--line); flex-shrink:0; }
 .dash-title-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:4px; }
 .dash-title{ font-weight:700; font-size:1.06rem; color:var(--ink); }
 a.dash-title:hover{ color:var(--brand); }

@@ -1,12 +1,16 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useAuthStore } from './store/auth'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
+const menuOpen = ref(false)
 const initial = computed(() => (auth.user?.name || '?').trim().charAt(0).toUpperCase())
-function logout() { auth.logout(); router.push('/') }
+function logout() { menuOpen.value = false; auth.logout(); router.push('/') }
+// Close the mobile menu whenever the route changes
+watch(() => route.fullPath, () => { menuOpen.value = false })
 </script>
 
 <template>
@@ -19,7 +23,7 @@ function logout() { auth.logout(); router.push('/') }
 
   <header class="nav">
     <div class="nav-inner">
-      <router-link to="/" class="brand">
+      <router-link to="/" class="brand" @click="menuOpen = false">
         <span class="brand-mark">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 21s7-5.686 7-11a7 7 0 1 0-14 0c0 5.314 7 11 7 11Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -29,11 +33,16 @@ function logout() { auth.logout(); router.push('/') }
         <span class="brand-text">Found<span class="brand-accent">It</span></span>
       </router-link>
 
-      <nav class="nav-links">
-        <router-link to="/">Browse</router-link>
-        <router-link v-if="auth.isLoggedIn" to="/post">Report Item</router-link>
-        <router-link v-if="auth.isLoggedIn" to="/dashboard">Dashboard</router-link>
-        <router-link v-if="!auth.isLoggedIn" to="/login" class="nav-cta">Log in</router-link>
+      <button class="nav-toggle" @click="menuOpen = !menuOpen" :aria-expanded="menuOpen ? 'true' : 'false'" aria-label="Toggle navigation menu">
+        <svg v-if="!menuOpen" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <svg v-else viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+
+      <nav class="nav-links" :class="{ open: menuOpen }">
+        <router-link to="/" @click="menuOpen = false">Browse</router-link>
+        <router-link v-if="auth.isLoggedIn" to="/post" @click="menuOpen = false">Report Item</router-link>
+        <router-link v-if="auth.isLoggedIn" to="/dashboard" @click="menuOpen = false">Dashboard</router-link>
+        <router-link v-if="!auth.isLoggedIn" to="/login" class="nav-cta" @click="menuOpen = false">Log in</router-link>
         <span v-else class="navuser">
           <span class="who"><span class="avatar">{{ initial }}</span><span class="who-name">{{ auth.user?.name }}</span></span>
           <a href="#" class="logout" @click.prevent="logout">Logout</a>
@@ -127,6 +136,9 @@ p{ margin:.55em 0; }
   display:grid; place-items:center; font-weight:800; font-size:.85rem; }
 .logout{ color:var(--ink-2); font-weight:600; font-size:.9rem; padding:7px 11px; border-radius:9px; }
 .logout:hover{ color:var(--danger); background:var(--lost-bg); }
+.nav-toggle{ display:none; align-items:center; justify-content:center; width:42px; height:42px;
+  border:1px solid var(--line-2); border-radius:11px; background:var(--card); color:var(--ink); cursor:pointer; }
+.nav-toggle:hover{ background:var(--paper-2); }
 
 /* ---------- layout ---------- */
 .container{ width:100%; max-width:1080px; margin:0 auto; padding:40px 22px 64px; flex:1 0 auto; }
@@ -254,10 +266,17 @@ input:focus, select:focus, textarea:focus{ outline:none; border-color:var(--bran
 @media (max-width:640px){
   .nav-inner{ padding:11px 16px; }
   .brand{ font-size:1.28rem; }
-  .nav-links{ gap:1px; }
-  .nav-links a{ padding:7px 9px; font-size:.86rem; }
-  .who-name{ display:none; }
-  .navuser{ margin-left:2px; padding-left:8px; }
+  .nav-toggle{ display:inline-flex; }
+  /* nav links collapse into a dropdown panel under the bar */
+  .nav-links{ position:absolute; top:100%; left:0; right:0; flex-direction:column; align-items:stretch;
+    gap:3px; background:var(--card); border-bottom:1px solid var(--line); box-shadow:var(--shadow);
+    padding:10px 16px 16px; display:none; }
+  .nav-links.open{ display:flex; }
+  .nav-links a{ padding:12px 13px; font-size:1rem; border-radius:10px; }
+  .nav-cta{ text-align:center; margin-top:2px; }
+  .who-name{ display:inline; }
+  .navuser{ margin-left:0; padding:10px 4px 2px; border-left:none; border-top:1px solid var(--line);
+    margin-top:6px; justify-content:space-between; width:100%; }
   .container{ padding:26px 16px 48px; }
 }
 </style>

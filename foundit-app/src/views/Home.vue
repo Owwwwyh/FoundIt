@@ -144,8 +144,8 @@ onMounted(loadItems)
 
 .results-head{ margin:0 0 14px; font-weight:600; font-size:.9rem; }
 
-.card-photo{ margin:-2px 0 12px; border-radius:10px; overflow:hidden; height:150px; background:var(--paper-2); }
-.card-photo img{ width:100%; height:100%; object-fit:cover; display:block; }
+.card-photo{ margin:-2px 0 12px; border-radius:10px; overflow:hidden; height:160px; background:var(--paper-2); }
+.card-photo img{ width:100%; height:100%; object-fit:contain; display:block; }
 
 .skel{ background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:18px; box-shadow:var(--shadow-sm); }
 .skel-line{ height:12px; border-radius:6px; margin:9px 0;
