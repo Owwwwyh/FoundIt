@@ -14,6 +14,7 @@ Frontend hosted on **Vercel** · backend + **MySQL** on **AlwaysData**.
 
 **Core**
 - 🔐 **Accounts & auth** — register / log in, JWT-protected routes, bcrypt-hashed passwords
+- 🔑 **Forgot password** — request a reset link by email, then set a new password via a secure, single-use, 30-minute link
 - 📋 **Post lost & found items** — title, category, location, date, description
 - 🔎 **Browse & filter** — keyword search + filter by type (lost/found), category and status
 - 🙋 **Claims workflow** — file a claim with proof; the poster approves/rejects. Approving resolves the item and auto-rejects the other pending claims (transaction-safe)
@@ -30,6 +31,8 @@ Frontend hosted on **Vercel** · backend + **MySQL** on **AlwaysData**.
 |---|---|---|---|
 | POST | `/api/register` | – | Create an account |
 | POST | `/api/login` | – | Log in, returns a JWT |
+| POST | `/api/forgot-password` | – | Email a password-reset link |
+| POST | `/api/reset-password` | – | Set a new password using the reset token |
 | GET | `/api/items` | – | List items (`?type=`, `?category=`, `?status=`, `?search=`) |
 | GET | `/api/items/{id}` | – | One item |
 | GET | `/api/items/{id}/matches` | – | Smart match suggestions *(bonus #3)* |
@@ -128,6 +131,7 @@ Open http://localhost:5173.
 
 ## Demo testing checklist
 - [ ] Register → log in → token stored
+- [ ] Forgot password → reset link emailed → set a new password → log in with it
 - [ ] Open `/post` while logged out → redirected to `/login`
 - [ ] Create / edit / delete an item
 - [ ] File a claim; owner approves/rejects
