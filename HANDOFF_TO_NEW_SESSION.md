@@ -21,12 +21,14 @@ We are continuing a Web Technology (SECJ3483) group project called **FoundIt**, 
   - Frontend → **Vercel**: https://foundit-app-beta.vercel.app (CLI logged in as `owwwwyh`).
   - Backend (PHP) + **MySQL** → **AlwaysData** (free plan, account `foundit261`): https://foundit261.alwaysdata.net/api
   - Code: https://github.com/Owwwwyh/FoundIt (`gh` authed as `Owwwwyh`; commit everything as me, OW YEE HAO).
-- **Bonus Feature #1 (Photo upload) — DONE & live.** Items can have a photo (`POST /api/items/{id}/image`, owner-only, validated, stored under public `/uploads`, `items.image_path` column).
+- **Bonus #1 (Photo upload) — DONE & live.** `POST /api/items/{id}/image`, owner-only, real image-type validation, stored under public `/uploads`, `items.image_path` column.
+- **Bonus #2 (Email notifications) — DONE & live.** PHPMailer + Gmail SMTP; poster emailed on a new claim, claimant emailed on approve/reject. Fire-and-forget (never crashes the API). Config in `.env` (`MAIL_*`).
+- **Bonus #3 (Smart match suggestions) — DONE & live.** `GET /api/items/{id}/matches` ranks open opposite-type items by category/keyword/location/date; shown as a "Possible matches" section on item detail.
+- **Forgot password — DONE & live.** `POST /api/forgot-password` + `POST /api/reset-password`; emails a single-use, 30-min signed-token link (no DB migration). Pages: `/forgot-password`, `/reset-password`.
+- **Photo display + responsive — DONE & live.** Item photos use `object-fit:contain` (whole item shown); navbar has a mobile hamburger menu.
 
-**What's LEFT — 4 more bonus features, do ONE AT A TIME, starting from #2:**
-2. **Email notifications** — email the item's poster when a claim is filed; email the claimant when approved/rejected.
-3. **Smart match suggestions** — when a "lost" item is posted, suggest matching "found" items (same category/keyword/location).
-4. **Admin role + moderation dashboard** — a second role that can manage any item and see stats (role-based authorization).
+**What's LEFT — 2 more bonus features, do ONE AT A TIME, starting from #4:**
+4. **Admin role + moderation dashboard** — a second role that can manage any item and see stats (role-based authorization). *(Needs a DB change — e.g. a `role` column on `users` — so it requires my approval first.)*
 5. **Campus map location picker** — pick where an item was lost/found on an interactive map (Leaflet.js).
 
 **How I want you to work (IMPORTANT):**
@@ -49,7 +51,7 @@ We are continuing a Web Technology (SECJ3483) group project called **FoundIt**, 
 - AlwaysData won't let you `CREATE DATABASE` over SQL — databases are made in its panel.
 - Backend runs on **:8081** locally (8080 was taken).
 
-Start by reading `PROJECT_TODO.md`, then tell me the status and propose how you'll build **Feature #2 (Email notifications)**.
+Start by reading `PROJECT_TODO.md`, then tell me the status and propose how you'll build **Feature #4 (Admin role + moderation dashboard)** — remember it needs a DB change, so ask for my approval before migrating.
 
 ---
 
