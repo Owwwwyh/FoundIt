@@ -13,6 +13,33 @@ const errors = ref({})
 const serverError = ref('')
 const loading = ref(false)
 
+const imageFile = ref(null)
+const imagePreview = ref('')
+
+function onFile(e) {
+  const f = e.target.files && e.target.files[0]
+  errors.value = { ...errors.value, image: '' }
+  if (!f) { imageFile.value = null; imagePreview.value = ''; return }
+  if (!f.type.startsWith('image/')) {
+    errors.value = { ...errors.value, image: 'Please choose an image file.' }
+    imageFile.value = null; imagePreview.value = ''; e.target.value = ''
+    return
+  }
+  if (f.size > 2 * 1024 * 1024) {
+    errors.value = { ...errors.value, image: 'Image must be 2 MB or smaller.' }
+    imageFile.value = null; imagePreview.value = ''; e.target.value = ''
+    return
+  }
+  imageFile.value = f
+  imagePreview.value = URL.createObjectURL(f)
+}
+
+function clearImage() {
+  imageFile.value = null
+  imagePreview.value = ''
+  errors.value = { ...errors.value, image: '' }
+}
+
 function validate() {
   const e = {}
   if (!form.value.title.trim()) e.title = 'Title is required.'
@@ -30,7 +57,20 @@ async function submit() {
   try {
     // JWT is attached automatically by the axios interceptor
     const { data } = await http.post('/items', form.value)
-    router.push(`/items/${data.item.id}`)
+    const id = data.item.id
+
+    // If a photo was chosen, upload it to the new item (best-effort)
+    if (imageFile.value) {
+      try {
+        const fd = new FormData()
+        fd.append('image', imageFile.value)
+        await http.post(`/items/${id}/image`, fd)
+      } catch (e) {
+        // The item is already created; don't lose it if only the photo failed
+        console.warn('Photo upload failed:', e.response?.data || e.message)
+      }
+    }
+    router.push(`/items/${id}`)
   } catch (err) {
     if (err.response?.data?.errors) errors.value = err.response.data.errors
     else serverError.value = 'Could not save the item.'
@@ -95,6 +135,16 @@ async function submit() {
         <textarea v-model="form.description" rows="3" placeholder="Any extra detail that helps identify it…"></textarea>
       </div>
 
+      <div class="field">
+        <label>Photo <span class="opt">(optional · JPG/PNG/WEBP/GIF, max 2 MB)</span></label>
+        <input type="file" accept="image/*" class="file-input" @change="onFile" />
+        <p v-if="errors.image" class="err">{{ errors.image }}</p>
+        <div v-if="imagePreview" class="img-preview">
+          <img :src="imagePreview" alt="Selected photo preview" />
+          <button type="button" class="btn btn-ghost btn-sm" @click="clearImage">Remove photo</button>
+        </div>
+      </div>
+
       <p v-if="serverError" class="err">{{ serverError }}</p>
       <button class="btn btn-primary btn-block btn-submit" :disabled="loading">{{ loading ? 'Saving…' : 'Submit report' }}</button>
     </form>
@@ -118,6 +168,13 @@ async function submit() {
 .chip-dot.lost{ background:var(--lost); }
 .chip-dot.found{ background:var(--found); }
 .opt{ color:var(--ink-2); font-weight:400; font-size:.82rem; }
+.file-input{ padding:10px 12px; border:1.5px dashed var(--line-2); border-radius:11px; background:var(--paper);
+  font-size:.9rem; cursor:pointer; }
+.file-input::file-selector-button{ font-family:var(--font-body); font-weight:600; font-size:.85rem; cursor:pointer;
+  border:1px solid var(--line-2); background:var(--card); color:var(--ink); padding:7px 12px; border-radius:8px; margin-right:12px; }
+.img-preview{ margin-top:12px; display:flex; align-items:flex-end; gap:14px; }
+.img-preview img{ width:140px; height:140px; object-fit:cover; border-radius:12px; border:1px solid var(--line);
+  box-shadow:var(--shadow-sm); }
 .btn-submit{ margin-top:6px; padding:13px; }
 @media (max-width:520px){ .grid-2{ grid-template-columns:1fr; } }
 </style>

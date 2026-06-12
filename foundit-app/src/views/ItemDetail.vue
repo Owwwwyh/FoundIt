@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import http from '../api/http'
+import http, { imageUrl } from '../api/http'
 import { useAuthStore } from '../store/auth'
 
 const route = useRoute()
@@ -93,6 +93,8 @@ onMounted(load)
       </div>
       <h1>{{ item.title }}</h1>
 
+      <img v-if="item.image_path" :src="imageUrl(item.image_path)" :alt="item.title" class="item-photo" />
+
       <div class="facts">
         <div class="fact"><span class="fact-k">Category</span><span class="fact-v">{{ item.category }}</span></div>
         <div class="fact"><span class="fact-k">Location</span><span class="fact-v">{{ item.location }}</span></div>
@@ -155,6 +157,8 @@ onMounted(load)
 .back:hover{ color:var(--brand); }
 .detail{ display:grid; grid-template-columns:1.6fr 1fr; gap:22px; align-items:start; }
 .detail-main h1{ margin:16px 0 20px; }
+.item-photo{ width:100%; max-height:380px; object-fit:cover; border-radius:14px; border:1px solid var(--line);
+  box-shadow:var(--shadow-sm); margin:0 0 22px; display:block; }
 .facts{ display:flex; flex-wrap:wrap; gap:10px; margin:0 0 22px; }
 .fact{ background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:10px 15px; min-width:118px; }
 .fact-k{ display:block; font-size:.7rem; text-transform:uppercase; letter-spacing:.6px; color:var(--ink-2); font-weight:700; margin-bottom:3px; }

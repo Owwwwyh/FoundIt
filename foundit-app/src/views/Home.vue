@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import http from '../api/http'
+import http, { imageUrl } from '../api/http'
 
 const items = ref([])
 const loading = ref(false)
@@ -106,6 +106,9 @@ onMounted(loadItems)
     <p class="results-head muted">{{ items.length }} item<span v-if="items.length !== 1">s</span> reported</p>
     <div class="grid">
       <router-link v-for="item in items" :key="item.id" :to="`/items/${item.id}`" class="card">
+        <div v-if="item.image_path" class="card-photo">
+          <img :src="imageUrl(item.image_path)" :alt="item.title" loading="lazy" />
+        </div>
         <div class="card-top">
           <span class="badge" :class="item.type">{{ item.type }}</span>
           <span class="status" :class="item.status">{{ item.status }}</span>
@@ -140,6 +143,9 @@ onMounted(loadItems)
 .seg button.active{ background:var(--brand); color:#fff; box-shadow:var(--shadow-sm); }
 
 .results-head{ margin:0 0 14px; font-weight:600; font-size:.9rem; }
+
+.card-photo{ margin:-2px 0 12px; border-radius:10px; overflow:hidden; height:150px; background:var(--paper-2); }
+.card-photo img{ width:100%; height:100%; object-fit:cover; display:block; }
 
 .skel{ background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:18px; box-shadow:var(--shadow-sm); }
 .skel-line{ height:12px; border-radius:6px; margin:9px 0;

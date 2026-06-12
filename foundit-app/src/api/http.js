@@ -14,4 +14,12 @@ http.interceptors.request.use((config) => {
   return config
 })
 
+// Origin for static assets (strip the trailing /api from the API base)
+export const assetOrigin = (import.meta.env.VITE_API_BASE || 'http://localhost:8081/api').replace(/\/api\/?$/, '')
+
+// Build a full URL for an uploaded image path like "/uploads/x.jpg"
+export function imageUrl(path) {
+  return path ? assetOrigin + path : ''
+}
+
 export default http

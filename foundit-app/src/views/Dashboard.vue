@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import http from '../api/http'
+import http, { imageUrl } from '../api/http'
 
 const tab = ref('items')
 const myItems = ref([])
@@ -67,6 +67,7 @@ onMounted(loadAll)
       <router-link class="btn btn-primary" to="/post">Report an item</router-link>
     </div>
     <div v-for="item in myItems" :key="item.id" class="row dash-row">
+      <img v-if="item.image_path" :src="imageUrl(item.image_path)" class="dash-thumb" :alt="item.title" />
       <div class="dash-info">
         <div class="dash-title-row">
           <router-link :to="`/items/${item.id}`" class="dash-title">{{ item.title }}</router-link>
@@ -112,7 +113,8 @@ onMounted(loadAll)
 .tab-count{ background:var(--paper-2); color:var(--ink-2); font-size:.72rem; font-weight:800; padding:1px 8px; border-radius:999px; margin-left:6px; }
 .tab.active .tab-count{ background:var(--brand-100); color:var(--brand-700); }
 .dash-row{ align-items:center; }
-.dash-info{ min-width:0; }
+.dash-info{ min-width:0; flex:1; }
+.dash-thumb{ width:54px; height:54px; object-fit:cover; border-radius:10px; border:1px solid var(--line); flex-shrink:0; }
 .dash-title-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:4px; }
 .dash-title{ font-weight:700; font-size:1.06rem; color:var(--ink); }
 a.dash-title:hover{ color:var(--brand); }
