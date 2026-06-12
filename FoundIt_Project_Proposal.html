@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoundIt — Project Proposal (SECJ3483)</title>
+<style>
+  :root{
+    --navy:#16314f; --navy2:#1f3a5f; --blue:#2563eb; --ink:#1f2937;
+    --muted:#6b7280; --border:#d1d5db; --soft:#eef3fb; --soft2:#eef2ff;
+    --ok:#15803d; --warn:#b45309;
+  }
+  *{box-sizing:border-box;}
+  html{font-size:15px;}
+  body{
+    font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink); line-height:1.55; margin:0;
+    background:#f3f4f6;
+  }
+  .page{
+    max-width:880px; margin:24px auto; background:#fff; padding:54px 60px;
+    box-shadow:0 1px 6px rgba(0,0,0,.12);
+  }
+  h1{font-size:1.9rem; color:var(--navy); margin:0 0 4px;}
+  h2{font-size:1.25rem; color:var(--navy); border-bottom:2px solid var(--navy);
+     padding-bottom:5px; margin:34px 0 14px;}
+  h3{font-size:1.02rem; color:var(--navy2); margin:20px 0 6px;}
+  p{margin:8px 0;}
+  a{color:var(--blue);}
+  .lead{color:var(--muted); font-size:.95rem;}
+  .cover-meta{margin:18px 0 6px; border:1px solid var(--border); border-radius:8px; overflow:hidden;}
+  .cover-meta table{width:100%; border-collapse:collapse;}
+  .cover-meta td{padding:8px 12px; border-bottom:1px solid var(--border); font-size:.92rem;}
+  .cover-meta tr:last-child td{border-bottom:none;}
+  .cover-meta td:first-child{background:var(--soft); color:var(--navy2); font-weight:600; width:32%;}
+  table.grid{width:100%; border-collapse:collapse; margin:12px 0; font-size:.88rem;}
+  table.grid th{background:var(--navy); color:#fff; text-align:left; padding:8px 10px; font-weight:600;}
+  table.grid td{border:1px solid var(--border); padding:7px 10px; vertical-align:top;}
+  table.grid tr:nth-child(even) td{background:#fafbfc;}
+  code,.mono{font-family:"Consolas","SF Mono",monospace; font-size:.85em;
+    background:#f1f5f9; padding:1px 5px; border-radius:4px; color:#0f3d6b;}
+  .lock{display:inline-block; font-size:.72rem; font-weight:700; color:#fff;
+    background:var(--blue); border-radius:4px; padding:1px 6px;}
+  .pub{display:inline-block; font-size:.72rem; font-weight:700; color:var(--muted);
+    background:#e5e7eb; border-radius:4px; padding:1px 6px;}
+  .fig{margin:16px 0; padding:14px; border:1px solid var(--border); border-radius:8px; background:#fcfdff;}
+  .fig svg{width:100%; height:auto; display:block;}
+  .figcap{font-size:.82rem; color:var(--muted); text-align:center; margin-top:8px;}
+  ul{margin:8px 0; padding-left:22px;}
+  li{margin:4px 0;}
+  .note{background:var(--soft2); border-left:4px solid var(--blue); padding:10px 14px;
+    border-radius:0 6px 6px 0; font-size:.9rem; margin:12px 0;}
+  .pill{display:inline-block; font-size:.74rem; background:var(--soft); color:var(--navy2);
+    border:1px solid #cdd9ec; border-radius:20px; padding:2px 10px; margin:2px 3px 2px 0;}
+  .small{font-size:.82rem; color:var(--muted);}
+  @media print{
+    body{background:#fff;} .page{box-shadow:none; margin:0; max-width:none; padding:0 8mm;}
+    h2{page-break-after:avoid;} .fig,table.grid{page-break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="small" style="letter-spacing:.5px; text-transform:uppercase; color:var(--blue); font-weight:700;">SECJ3483 Web Technology · Group Project Proposal</p>
+  <h1>FoundIt — Campus Lost &amp; Found Hub</h1>
+  <p class="lead">A full-stack single-page web application that lets a university community report, search, and reclaim lost and found items through one searchable, secure platform.</p>
+
+  <div class="cover-meta">
+    <table>
+      <tr><td>Course</td><td>SECJ3483 Web Technology — Academic Session 2025/2026</td></tr>
+      <tr><td>Project</td><td>FoundIt — Campus Lost &amp; Found Hub</td></tr>
+      <tr><td>Group members</td><td>OW YEE HAO (A23CS0261) · CHONG LUN QUAN (A23CS0067) · [Member 3] · [Member 4]</td></tr>
+      <tr><td>Stack</td><td>Vue.js SPA · PHP Slim REST API · MySQL (PDO) · JWT authentication</td></tr>
+      <tr><td>Deployment</td><td>Vercel (frontend) + Railway (backend &amp; MySQL)</td></tr>
+      <tr><td>Repository</td><td>https://github.com/Owwwwyh/FoundIt</td></tr>
+    </table>
+  </div>
+  <p class="small">Replace all <code>[bracketed]</code> placeholders with your group's real details before submission.</p>
+
+  <h2>1. Problem Statement &amp; Target Users</h2>
+  <p>On a busy university campus, hundreds of items are lost every semester — student ID and access cards, keys, water bottles, calculators, chargers, lab coats, and electronics. Today these are reported through scattered, informal channels: WhatsApp and Telegram class groups, word of mouth, and paper notices pinned to faculty boards. These channels share three weaknesses: they are <strong>not searchable</strong>, they are <strong>ephemeral</strong> (a message scrolls away within hours), and they are <strong>uncoordinated</strong> (the person who lost an item and the person who found it are rarely in the same group). As a result, found items seldom reach their owners, and the security/administration office has no single record to consult.</p>
+  <p><strong>FoundIt</strong> solves this by giving the campus one searchable, persistent, and secure noticeboard for lost and found items, with a verifiable claim process so items are returned to the right person.</p>
+  <h3>Target users</h3>
+  <ul>
+    <li><strong>Owners who lost an item</strong> — search the found-items list and post a "lost" report describing what is missing.</li>
+    <li><strong>Finders</strong> (students, staff, security) — post a "found" item so its owner can locate it.</li>
+    <li><strong>Claimants &amp; posters</strong> — a person files a claim with proof of ownership; the original poster reviews and approves or rejects it.</li>
+  </ul>
+  <div class="note"><strong>Why it is feasible &amp; meaningful:</strong> the audience (campus community) is the same audience that will watch the demo, the problem is real and relatable, and the data model is small enough to build completely within the semester while still exercising every required topic — SPA, REST CRUD, related tables, and JWT-protected access.</div>
+
+  <h2>2. Functional Scope &amp; Modules</h2>
+  <p>The application is built from four coherent modules. Together they deliver complete CRUD across the data model and at least one JWT-protected flow.</p>
+  <table class="grid">
+    <thead><tr><th style="width:24%">Module</th><th>Core functionality</th><th style="width:24%">CRUD / API coverage</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Authentication</strong></td><td>Register an account, log in to receive a JWT, log out; protected routes reject requests without a valid token.</td><td>POST register, POST login</td></tr>
+      <tr><td><strong>Item management</strong></td><td>Report a lost/found item; browse all items; search and filter by type, category, and keyword; view item detail; edit, delete, or mark resolved (owner only).</td><td>GET, POST, PUT, DELETE on <code>items</code></td></tr>
+      <tr><td><strong>Claims</strong></td><td>A logged-in user files a claim ("this is mine") with proof; the item's poster reviews claims and approves/rejects; claimants track or withdraw their claims.</td><td>GET, POST, PUT, DELETE on <code>claims</code></td></tr>
+      <tr><td><strong>Dashboard</strong></td><td>A personal view listing the user's posted items and filed claims, with quick management actions.</td><td>GET (filtered reads)</td></tr>
+    </tbody>
+  </table>
+  <h3>Out of scope (intentional, to stay realistic)</h3>
+  <p>To keep the scope deliverable in 2–3 weeks, the following are deliberately excluded and noted as future work: real-time chat between users, AI image recognition of items, email/push notifications, and a native mobile app. Optional stretch goal if time allows: a single photo upload per item.</p>
+
+  <h2>3. Technical Design</h2>
+
+  <h3>3.1 Technology stack</h3>
+  <table class="grid">
+    <thead><tr><th style="width:22%">Layer</th><th>Choice</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>Frontend</td><td>Vue.js 3 (SPA) + Vue Router + Axios + Pinia store</td><td>Single-page UI, client-side routing, async API calls, auth state, form validation</td></tr>
+      <tr><td>Backend</td><td>PHP Slim 4 (REST API)</td><td>Routes, middleware, JSON request/response, HTTP status codes</td></tr>
+      <tr><td>Database</td><td>MySQL with PDO</td><td>Three related tables, prepared statements (SQL-injection safe)</td></tr>
+      <tr><td>Security</td><td>JWT (firebase/php-jwt) + bcrypt password hashing</td><td>Token-based login, protected routes, hashed credentials</td></tr>
+      <tr><td>Hosting</td><td>Vercel (frontend) + Railway (backend + MySQL)</td><td>Live public URL for the demo</td></tr>
+      <tr><td>Tooling</td><td>Git + GitHub, Composer, npm/Vite</td><td>Version control with visible per-member contributions</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.2 System architecture</h3>
+  <div class="fig">
+    <svg viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="System architecture: Vue SPA in the browser calls the Slim REST API over HTTPS with a JWT; the API uses PDO to reach MySQL.">
+      <defs>
+        <marker id="a1" markerWidth="10" markerHeight="10" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#6b7280"/></marker>
+      </defs>
+      <rect x="20" y="60" width="190" height="130" rx="10" fill="#fcfdff" stroke="#d1d5db" stroke-width="1.5"/>
+      <text x="115" y="84" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#16314f">Browser</text>
+      <rect x="40" y="98" width="150" height="74" rx="7" fill="#eef3fb" stroke="#cdd9ec"/>
+      <text x="115" y="120" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12.5" font-weight="700" fill="#1f3a5f">Vue.js SPA</text>
+      <text x="115" y="138" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10.5" fill="#6b7280">Vue Router · Axios</text>
+      <text x="115" y="154" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10.5" fill="#6b7280">forms + validation</text>
+      <rect x="300" y="50" width="210" height="150" rx="10" fill="#fcfdff" stroke="#d1d5db" stroke-width="1.5"/>
+      <text x="405" y="74" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#16314f">PHP Slim REST API</text>
+      <rect x="320" y="88" width="170" height="34" rx="6" fill="#e0e7ff" stroke="#c7d2fe"/>
+      <text x="405" y="109" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11.5" font-weight="700" fill="#2563eb">JWT auth middleware</text>
+      <rect x="320" y="130" width="170" height="32" rx="6" fill="#eef3fb" stroke="#cdd9ec"/>
+      <text x="405" y="150" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" fill="#1f3a5f">Controllers · validation</text>
+      <rect x="320" y="168" width="170" height="22" rx="6" fill="#f1f5f9" stroke="#d1d5db"/>
+      <text x="405" y="183" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10.5" fill="#6b7280">PDO (prepared statements)</text>
+      <rect x="600" y="78" width="140" height="94" rx="10" fill="#fcfdff" stroke="#d1d5db" stroke-width="1.5"/>
+      <ellipse cx="670" cy="100" rx="46" ry="12" fill="#eef3fb" stroke="#cdd9ec"/>
+      <path d="M624,100 v44 a46,12 0 0 0 92,0 v-44" fill="#eef3fb" stroke="#cdd9ec"/>
+      <text x="670" y="132" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12.5" font-weight="700" fill="#1f3a5f">MySQL</text>
+      <text x="670" y="148" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#6b7280">3 related tables</text>
+      <path d="M210,118 L298,118" stroke="#6b7280" stroke-width="1.6" fill="none" marker-end="url(#a1)"/>
+      <text x="254" y="108" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9.5" fill="#6b7280" font-style="italic">HTTPS · JSON</text>
+      <text x="254" y="134" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9.5" fill="#2563eb" font-style="italic">Bearer &lt;JWT&gt;</text>
+      <path d="M510,125 L598,125" stroke="#6b7280" stroke-width="1.6" fill="none" marker-end="url(#a1)"/>
+      <text x="554" y="116" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9.5" fill="#6b7280" font-style="italic">SQL</text>
+    </svg>
+    <div class="figcap">Figure 1 — Request flow: the Vue SPA sends JSON over HTTPS with a Bearer JWT; Slim verifies the token in middleware before controllers use PDO to query MySQL.</div>
+  </div>
+
+  <h3>3.3 Database schema (3 related tables)</h3>
+  <p>Every record hangs off <code>users</code>. A user <em>posts</em> many <code>items</code>; each item <em>receives</em> many <code>claims</code>; a user <em>files</em> many claims. All relationships are one-to-many, enforced by foreign keys.</p>
+  <div class="fig">
+    <svg viewBox="0 0 760 410" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Entity relationship diagram for users, items and claims tables.">
+      <style>
+        .nm{fill:#16314f;font-weight:700;text-anchor:middle;font-family:Segoe UI,sans-serif}
+        .col{fill:#374151;font-family:Consolas,monospace;font-size:11.5px}
+        .muted{fill:#9aa3af;font-style:italic;font-family:Segoe UI,sans-serif}
+        .tag{fill:#2563eb;font-family:Consolas,monospace;font-size:9px;font-weight:700;text-anchor:end}
+        .card{fill:#2563eb;font-family:Consolas,monospace;font-size:12px;font-weight:700}
+        .rlbl{fill:#6b7280;font-size:10.5px;text-anchor:middle;font-style:italic;font-family:Segoe UI,sans-serif}
+      </style>
+      <rect x="24" y="70" width="196" height="150" rx="8" fill="#fff" stroke="#9fb3cc" stroke-width="1.5"/>
+      <path d="M24,78 a8,8 0 0 1 8,-8 h180 a8,8 0 0 1 8,8 v26 h-196 z" fill="#2563eb" fill-opacity="0.1"/>
+      <text x="122" y="94" class="nm" font-size="14">users</text>
+      <line x1="24" y1="104" x2="220" y2="104" stroke="#d1d5db"/>
+      <text x="38" y="128" class="col">id</text><text x="206" y="128" class="tag">PK</text>
+      <text x="38" y="150" class="col">name</text>
+      <text x="38" y="172" class="col">email</text><text x="206" y="172" class="tag">UNIQUE</text>
+      <text x="38" y="194" class="col">password_hash</text>
+      <text x="38" y="216" class="col">created_at</text>
+      <rect x="282" y="70" width="200" height="216" rx="8" fill="#fff" stroke="#9fb3cc" stroke-width="1.5"/>
+      <path d="M282,78 a8,8 0 0 1 8,-8 h184 a8,8 0 0 1 8,8 v26 h-200 z" fill="#2563eb" fill-opacity="0.1"/>
+      <text x="382" y="94" class="nm" font-size="14">items</text>
+      <line x1="282" y1="104" x2="482" y2="104" stroke="#d1d5db"/>
+      <text x="296" y="128" class="col">id</text><text x="468" y="128" class="tag">PK</text>
+      <text x="296" y="150" class="col">user_id</text><text x="468" y="150" class="tag">FK&#8594;users</text>
+      <text x="296" y="172" class="col">title</text>
+      <text x="296" y="194" class="col">category</text>
+      <text x="296" y="216" class="col">type</text><text x="468" y="216" class="tag">lost/found</text>
+      <text x="296" y="238" class="col">location</text>
+      <text x="296" y="260" class="col">status</text>
+      <text x="296" y="280" class="muted" font-size="10.5">+ description, date_reported…</text>
+      <rect x="544" y="70" width="192" height="172" rx="8" fill="#fff" stroke="#9fb3cc" stroke-width="1.5"/>
+      <path d="M544,78 a8,8 0 0 1 8,-8 h176 a8,8 0 0 1 8,8 v26 h-192 z" fill="#2563eb" fill-opacity="0.1"/>
+      <text x="640" y="94" class="nm" font-size="14">claims</text>
+      <line x1="544" y1="104" x2="736" y2="104" stroke="#d1d5db"/>
+      <text x="558" y="128" class="col">id</text><text x="722" y="128" class="tag">PK</text>
+      <text x="558" y="150" class="col">item_id</text><text x="722" y="150" class="tag">FK&#8594;items</text>
+      <text x="558" y="172" class="col">user_id</text><text x="722" y="172" class="tag">FK&#8594;users</text>
+      <text x="558" y="194" class="col">message</text>
+      <text x="558" y="216" class="col">status</text>
+      <text x="558" y="238" class="col">created_at</text>
+      <line x1="220" y1="150" x2="282" y2="150" stroke="#2563eb" stroke-width="1.6"/>
+      <text x="228" y="144" class="card">1</text><text x="270" y="144" class="card">&#8734;</text>
+      <text x="251" y="166" class="rlbl">posts</text>
+      <line x1="482" y1="156" x2="544" y2="156" stroke="#2563eb" stroke-width="1.6"/>
+      <text x="490" y="150" class="card">1</text><text x="532" y="150" class="card">&#8734;</text>
+      <text x="513" y="172" class="rlbl">receives</text>
+      <path d="M122,220 C 122,370 640,370 640,242" fill="none" stroke="#2563eb" stroke-width="1.6"/>
+      <text x="132" y="245" class="card">1</text><text x="624" y="262" class="card">&#8734;</text>
+      <text x="381" y="362" class="rlbl">files</text>
+    </svg>
+    <div class="figcap">Figure 2 — Entity-relationship diagram. PK = primary key, FK = foreign key, ∞ = many.</div>
+  </div>
+
+  <p>Full column definitions:</p>
+  <table class="grid">
+    <thead><tr><th>Table</th><th>Columns (type)</th></tr></thead>
+    <tbody>
+      <tr><td><code>users</code></td><td><code>id</code> INT PK AI · <code>name</code> VARCHAR(100) · <code>email</code> VARCHAR(150) UNIQUE · <code>password_hash</code> VARCHAR(255) · <code>created_at</code> TIMESTAMP</td></tr>
+      <tr><td><code>items</code></td><td><code>id</code> INT PK AI · <code>user_id</code> INT FK→users · <code>title</code> VARCHAR(150) · <code>description</code> TEXT · <code>category</code> VARCHAR(50) · <code>type</code> ENUM('lost','found') · <code>location</code> VARCHAR(150) · <code>status</code> ENUM('open','claimed','resolved') · <code>date_reported</code> DATE · <code>created_at</code> TIMESTAMP</td></tr>
+      <tr><td><code>claims</code></td><td><code>id</code> INT PK AI · <code>item_id</code> INT FK→items · <code>user_id</code> INT FK→users · <code>message</code> TEXT · <code>status</code> ENUM('pending','approved','rejected') · <code>created_at</code> TIMESTAMP</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.4 REST API concept</h3>
+  <p>Browsing items is public; posting items and the entire claims workflow require a valid JWT. <span class="pub">public</span> = open · <span class="lock">JWT</span> = token required.</p>
+  <table class="grid">
+    <thead><tr><th style="width:10%">Method</th><th style="width:34%">Route</th><th style="width:14%">Access</th><th>Purpose &amp; status codes</th></tr></thead>
+    <tbody>
+      <tr><td>POST</td><td><code>/api/register</code></td><td><span class="pub">public</span></td><td>Create account — 201, 422 invalid, 409 email exists</td></tr>
+      <tr><td>POST</td><td><code>/api/login</code></td><td><span class="pub">public</span></td><td>Return JWT — 200, 401 bad credentials</td></tr>
+      <tr><td>GET</td><td><code>/api/items</code></td><td><span class="pub">public</span></td><td>List + filter (<code>?type=&amp;category=&amp;search=</code>) — 200</td></tr>
+      <tr><td>GET</td><td><code>/api/items/{id}</code></td><td><span class="pub">public</span></td><td>One item — 200, 404</td></tr>
+      <tr><td>POST</td><td><code>/api/items</code></td><td><span class="lock">JWT</span></td><td>Report item — 201, 422, 401</td></tr>
+      <tr><td>PUT</td><td><code>/api/items/{id}</code></td><td><span class="lock">JWT owner</span></td><td>Edit / mark resolved — 200, 403, 404, 422</td></tr>
+      <tr><td>DELETE</td><td><code>/api/items/{id}</code></td><td><span class="lock">JWT owner</span></td><td>Remove item — 204, 403, 404</td></tr>
+      <tr><td>GET</td><td><code>/api/items/{id}/claims</code></td><td><span class="lock">JWT owner</span></td><td>List claims on my item — 200</td></tr>
+      <tr><td>POST</td><td><code>/api/items/{id}/claims</code></td><td><span class="lock">JWT</span></td><td>File a claim — 201, 422</td></tr>
+      <tr><td>PUT</td><td><code>/api/claims/{id}</code></td><td><span class="lock">JWT owner</span></td><td>Approve / reject — 200, 403</td></tr>
+      <tr><td>DELETE</td><td><code>/api/claims/{id}</code></td><td><span class="lock">JWT claimant</span></td><td>Withdraw claim — 204, 403</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.5 Security &amp; validation</h3>
+  <ul>
+    <li><strong>JWT authentication:</strong> login issues a signed token; a Slim middleware verifies the <code>Authorization: Bearer &lt;token&gt;</code> header on every protected route and returns <code>401</code> if missing or invalid.</li>
+    <li><strong>Authorization (ownership):</strong> editing/deleting an item or ruling on a claim checks that the token's user owns the resource — otherwise <code>403 Forbidden</code> (distinct from 401).</li>
+    <li><strong>Password storage:</strong> passwords are hashed with <code>password_hash()</code> (bcrypt); plaintext is never stored.</li>
+    <li><strong>Input validation on both ends:</strong> Vue validates forms before submitting (required fields, email format, length); PHP re-validates every request before touching the database and returns <code>422</code> with field messages on failure.</li>
+    <li><strong>SQL-injection defence:</strong> all queries use PDO prepared statements with bound parameters.</li>
+    <li><strong>Transport &amp; CORS:</strong> served over HTTPS; the API sets explicit CORS headers for the deployed frontend origin.</li>
+  </ul>
+
+  <h2>4. Interface Planning</h2>
+  <p>The SPA has six views managed by Vue Router. Four are public; two require login and are protected by a router navigation guard that redirects to <code>/login</code> when no JWT is present.</p>
+  <div class="fig">
+    <svg viewBox="0 0 760 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SPA navigation flow showing six pages and which require login.">
+      <defs>
+        <marker id="b1" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#6b7280"/></marker>
+        <marker id="b2" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#2563eb"/></marker>
+      </defs>
+      <style>
+        .nm2{fill:#16314f;font-weight:700;font-size:13px;text-anchor:middle;font-family:Segoe UI,sans-serif}
+        .rt{fill:#2563eb;font-family:Consolas,monospace;font-size:10px;text-anchor:middle}
+        .ds{fill:#6b7280;font-size:10px;text-anchor:middle;font-family:Segoe UI,sans-serif}
+        .albl{fill:#6b7280;font-size:9.5px;font-style:italic;font-family:Segoe UI,sans-serif}
+        .protlbl{fill:#2563eb;font-size:11px;font-weight:700;font-family:Segoe UI,sans-serif}
+      </style>
+      <rect x="28" y="78" width="150" height="50" rx="8" fill="#fff" stroke="#9fb3cc" stroke-width="1.5"/>
+      <text x="103" y="98" class="nm2">Register</text><text x="103" y="114" class="rt">/register</text>
+      <rect x="28" y="158" width="150" height="56" rx="8" fill="#fff" stroke="#9fb3cc" stroke-width="1.5"/>
+      <text x="103" y="180" class="nm2">Login</text><text x="103" y="196" class="rt">/login</text><text x="103" y="209" class="ds">stores JWT token</text>
+      <rect x="248" y="110" width="172" height="66" rx="8" fill="#fff" stroke="#9fb3cc" stroke-width="1.5"/>
+      <text x="334" y="134" class="nm2">Browse / Home</text><text x="334" y="150" class="rt">/</text><text x="334" y="165" class="ds">search + filter items</text>
+      <rect x="490" y="92" width="184" height="62" rx="8" fill="#fff" stroke="#9fb3cc" stroke-width="1.5"/>
+      <text x="582" y="114" class="nm2">Item Detail</text><text x="582" y="130" class="rt">/items/:id</text><text x="582" y="144" class="ds">view + claim button</text>
+      <rect x="466" y="206" width="234" height="158" rx="10" fill="none" stroke="#2563eb" stroke-width="1.4" stroke-dasharray="6 5"/>
+      <text x="478" y="228" class="protlbl">Requires login (JWT)</text>
+      <rect x="486" y="240" width="194" height="50" rx="8" fill="#fff" stroke="#9fb3cc" stroke-width="1.5"/>
+      <text x="583" y="260" class="nm2">Report Item</text><text x="583" y="276" class="rt">/post</text>
+      <rect x="486" y="302" width="194" height="50" rx="8" fill="#fff" stroke="#9fb3cc" stroke-width="1.5"/>
+      <text x="583" y="322" class="nm2">My Dashboard</text><text x="583" y="338" class="rt">/dashboard</text>
+      <path d="M103,128 L103,156" stroke="#6b7280" stroke-width="1.5" fill="none" marker-end="url(#b1)"/>
+      <text x="112" y="146" class="albl">then</text>
+      <path d="M178,182 C 210,176 222,150 246,146" stroke="#6b7280" stroke-width="1.5" fill="none" marker-end="url(#b1)"/>
+      <text x="186" y="160" class="albl">after login</text>
+      <path d="M420,138 C 450,132 460,126 488,124" stroke="#6b7280" stroke-width="1.5" fill="none" marker-end="url(#b1)"/>
+      <text x="430" y="118" class="albl">click item</text>
+      <path d="M150,214 C 250,300 360,300 462,290" stroke="#2563eb" stroke-width="1.5" fill="none" stroke-dasharray="5 4" marker-end="url(#b2)"/>
+      <text x="250" y="316" class="albl">JWT unlocks navbar links</text>
+    </svg>
+    <div class="figcap">Figure 3 — SPA pages &amp; navigation flow (Vue Router).</div>
+  </div>
+  <table class="grid">
+    <thead><tr><th style="width:24%">Page</th><th>Wireframe content</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Browse / Home</strong> <code>/</code></td><td>Search box, type and category filter dropdowns, responsive grid of item cards (title, category, lost/found badge, location, status). Clicking a card opens its detail. Loads via async <code>GET /api/items</code>.</td></tr>
+      <tr><td><strong>Item Detail</strong> <code>/items/:id</code></td><td>Full item information and poster; a "This is mine — Claim it" button for logged-in users opens a claim form; if you are the poster, the incoming claims are listed here with approve/reject controls.</td></tr>
+      <tr><td><strong>Report Item</strong> <code>/post</code></td><td>Form: title, category (dropdown), lost/found (radio), location, description, date — with live client-side validation and clear error messages.</td></tr>
+      <tr><td><strong>Login / Register</strong></td><td>Email + password forms with validation; on success the JWT is stored and the navbar updates to show protected links.</td></tr>
+      <tr><td><strong>My Dashboard</strong> <code>/dashboard</code></td><td>Two tabs — "My Items" (edit, delete, mark resolved, view claims) and "My Claims" (track pending/approved/rejected, withdraw).</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. Team Planning</h2>
+  <p>Four members, split two-backend / two-frontend, with the stronger members owning the authentication and SPA-core plumbing. Every member contributes to analysis, development, and the final demo, as required by the peer-evaluation rubric.</p>
+  <table class="grid">
+    <thead><tr><th style="width:18%">Member</th><th style="width:26%">Role</th><th>Responsibilities</th></tr></thead>
+    <tbody>
+      <tr><td>M1 <span class="small">OW YEE HAO</span></td><td>Backend Lead — Auth &amp; Security</td><td>Slim setup &amp; structure, PDO connection, <code>users</code> table, register/login, JWT middleware, password hashing, backend deployment to Railway</td></tr>
+      <tr><td>M2 <span class="small">[name]</span></td><td>Backend — Items &amp; Claims API</td><td><code>items</code> + <code>claims</code> tables &amp; sample data, all Items/Claims endpoints, backend validation, error handling &amp; status codes</td></tr>
+      <tr><td>M3 <span class="small">CHONG LUN QUAN</span></td><td>Frontend Lead — SPA core &amp; Auth UI</td><td>Vue + Router setup, navbar/layout, auth store, Axios + JWT attach, Login/Register pages, route guards, frontend deployment to Vercel</td></tr>
+      <tr><td>M4 <span class="small">[name]</span></td><td>Frontend — Features UI</td><td>Browse/Home (fetch + filter), Item Detail + claim flow, Report Item form, Dashboard, client-side validation, responsive CSS</td></tr>
+    </tbody>
+  </table>
+  <p class="small"><strong>Shared by all:</strong> README, this proposal, demo slides, cross-testing, and demo rehearsal.</p>
+
+  <h3>Timeline (10 June → demo 22–28 June 2026)</h3>
+  <table class="grid">
+    <thead><tr><th style="width:22%">Phase</th><th style="width:18%">Dates</th><th>Goal / milestone</th></tr></thead>
+    <tbody>
+      <tr><td>1. Setup &amp; API contract</td><td>Jun 10–12</td><td>Repo + branches, agreed API contract, DB schema created &amp; seeded, Vue + Slim skeletons running locally</td></tr>
+      <tr><td>2. Build core</td><td>Jun 13–17</td><td>Auth + JWT, items CRUD, login/register UI + router, browse + detail. <strong>Milestone: log in and list items end-to-end</strong></td></tr>
+      <tr><td>3. Integrate &amp; deploy</td><td>Jun 18–21</td><td>Claims feature, Report form + Dashboard, connect frontend to live backend, fix CORS, validation both ends, deploy to Railway + Vercel</td></tr>
+      <tr><td>4. Test, polish, rehearse</td><td>Jun 22–27</td><td>Full CRUD/auth testing, bug fixes, responsive polish, README + slides, demo rehearsal</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>Key risk &amp; mitigation:</strong> the frontend–backend connection (CORS + attaching the JWT) is the main risk for a mixed-skill team. Mitigation: M1 and M3 jointly own deployment, and Phase 1 fixes the API contract first so backend and frontend can be built in parallel.</div>
+
+  <h2>Appendix — Deliverables Checklist</h2>
+  <ul>
+    <li>Proposal document (this file)</li>
+    <li>Source-code repository with visible per-member contribution history</li>
+    <li>Final demo presentation slides</li>
+    <li>Live URL / hosted test environment</li>
+    <li>Database schema export &amp; seed file</li>
+    <li>README with setup instructions</li>
+    <li>Completed peer-evaluation form</li>
+  </ul>
+
+</div>
+</body>
+</html>
