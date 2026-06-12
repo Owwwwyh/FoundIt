@@ -5,6 +5,8 @@ import Home from '../views/Home.vue'
 import ItemDetail from '../views/ItemDetail.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
+import ForgotPassword from '../views/ForgotPassword.vue'
+import ResetPassword from '../views/ResetPassword.vue'
 import PostItem from '../views/PostItem.vue'
 import Dashboard from '../views/Dashboard.vue'
 
@@ -13,6 +15,8 @@ const routes = [
   { path: '/items/:id', name: 'item', component: ItemDetail },
   { path: '/login', name: 'login', component: Login },
   { path: '/register', name: 'register', component: Register },
+  { path: '/forgot-password', name: 'forgot-password', component: ForgotPassword },
+  { path: '/reset-password', name: 'reset-password', component: ResetPassword },
   { path: '/post', name: 'post', component: PostItem, meta: { requiresAuth: true } },
   { path: '/dashboard', name: 'dashboard', component: Dashboard, meta: { requiresAuth: true } }
 ]
