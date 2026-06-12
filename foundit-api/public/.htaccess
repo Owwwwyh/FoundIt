@@ -1,0 +1,13 @@
+# Front-controller routing for the Slim API (production / Apache hosts).
+# All requests that aren't real files/folders are sent to index.php,
+# and the Authorization header is passed through so JWT auth works.
+RewriteEngine On
+
+# Pass the Authorization header to PHP (some FastCGI setups strip it)
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Send everything that isn't an existing file/dir to the front controller
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
