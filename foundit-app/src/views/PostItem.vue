@@ -2,12 +2,17 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import http from '../api/http'
+import LocationMap from '../components/LocationMap.vue'
 
 const router = useRouter()
 const form = ref({
   title: '', category: '', type: '', location: '', description: '',
   date_reported: new Date().toISOString().slice(0, 10)
 })
+
+// The point chosen on the campus map ({ lat, lng } | null).
+const point = ref(null)
+function clearPoint() { point.value = null }
 const categories = ['Electronics', 'Documents', 'Keys', 'Clothing', 'Other']
 const errors = ref({})
 const serverError = ref('')
@@ -56,7 +61,12 @@ async function submit() {
   loading.value = true
   try {
     // JWT is attached automatically by the axios interceptor
-    const { data } = await http.post('/items', form.value)
+    const payload = {
+      ...form.value,
+      latitude: point.value ? point.value.lat : null,
+      longitude: point.value ? point.value.lng : null
+    }
+    const { data } = await http.post('/items', payload)
     const id = data.item.id
 
     // If a photo was chosen, upload it to the new item (best-effort)
@@ -131,6 +141,17 @@ async function submit() {
       </div>
 
       <div class="field">
+        <label>Pin it on the campus map <span class="opt">(optional)</span></label>
+        <p class="map-hint muted small">Tap the map to drop a pin where the item was lost or found — drag it to fine-tune.</p>
+        <LocationMap v-model="point" :editable="true" height="300px" />
+        <div class="map-meta">
+          <span v-if="point" class="coords">📍 {{ point.lat.toFixed(5) }}, {{ point.lng.toFixed(5) }}</span>
+          <span v-else class="muted small">No pin placed yet.</span>
+          <button v-if="point" type="button" class="btn btn-ghost btn-sm" @click="clearPoint">Clear pin</button>
+        </div>
+      </div>
+
+      <div class="field">
         <label>Description <span class="opt">(optional)</span></label>
         <textarea v-model="form.description" rows="3" placeholder="Any extra detail that helps identify it…"></textarea>
       </div>
@@ -176,5 +197,9 @@ async function submit() {
 .img-preview img{ width:140px; height:140px; object-fit:contain; background:var(--paper-2); border-radius:12px;
   border:1px solid var(--line); box-shadow:var(--shadow-sm); }
 .btn-submit{ margin-top:6px; padding:13px; }
+.map-hint{ margin:0 0 10px; }
+.map-meta{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; }
+.coords{ font-weight:600; font-size:.86rem; color:var(--ink); background:var(--paper-2);
+  padding:5px 11px; border-radius:9px; }
 @media (max-width:520px){ .grid-2{ grid-template-columns:1fr; } }
 </style>

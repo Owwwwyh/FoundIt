@@ -10,6 +10,7 @@ namespace App\Controllers;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 use App\Database;
+use App\Services\AiLocationService;
 
 class ItemController
 {
@@ -72,7 +73,7 @@ class ItemController
         if (!$item) {
             return $this->json($response, ['error' => 'Item not found.'], 404);
         }
-        return $this->json($response, ['item' => $item], 200);
+        return $this->json($response, ['item' => $this->hydrate($item)], 200);
     }
 
     // POST /api/items   (JWT)
@@ -86,10 +87,12 @@ class ItemController
             return $this->json($response, ['errors' => $errors], 422);
         }
 
+        [$lat, $lng] = $this->coords($data);
+
         $pdo  = Database::pdo();
         $stmt = $pdo->prepare(
-            'INSERT INTO items (user_id, title, description, category, type, location, status, date_reported)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO items (user_id, title, description, category, type, location, status, latitude, longitude, date_reported)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $userId,
@@ -99,10 +102,21 @@ class ItemController
             $data['type'],
             trim($data['location']),
             !empty($data['status']) ? $data['status'] : 'open',
+            $lat,
+            $lng,
             !empty($data['date_reported']) ? $data['date_reported'] : date('Y-m-d'),
         ]);
 
-        return $this->fetchOne($response, (int) $pdo->lastInsertId(), 201);
+        $newId = (int) $pdo->lastInsertId();
+
+        // Feature: run the local "AI" location scorer for the new item (best-effort).
+        try {
+            (new AiLocationService())->generateForItem($newId);
+        } catch (\Throwable $e) {
+            error_log('FoundIt AI hints error (store): ' . $e->getMessage());
+        }
+
+        return $this->fetchOne($response, $newId, 201);
     }
 
     // PUT /api/items/{id}   (JWT, owner only)
@@ -130,9 +144,18 @@ class ItemController
             return $this->json($response, ['errors' => $errors], 422);
         }
 
+        // Coordinates: accept new ones, otherwise keep what was stored.
+        [$lat, $lng] = $this->coords($data);
+        if ($lat === null && $lng === null
+            && !array_key_exists('latitude', $data) && !array_key_exists('longitude', $data)) {
+            $lat = $existing['latitude'];
+            $lng = $existing['longitude'];
+        }
+
         $stmt = $pdo->prepare(
             'UPDATE items
-             SET title = ?, description = ?, category = ?, type = ?, location = ?, status = ?, date_reported = ?
+             SET title = ?, description = ?, category = ?, type = ?, location = ?, status = ?,
+                 latitude = ?, longitude = ?, date_reported = ?
              WHERE id = ?'
         );
         $stmt->execute([
@@ -143,9 +166,21 @@ class ItemController
             trim($data['location']),
             // keep the existing value when the field is omitted
             !empty($data['status']) ? $data['status'] : $existing['status'],
+            $lat,
+            $lng,
             !empty($data['date_reported']) ? $data['date_reported'] : $existing['date_reported'],
             $id,
         ]);
+
+        // Refresh AI location hints if the location/coordinates changed (best-effort).
+        if (trim($data['location']) !== ($existing['location'] ?? '')
+            || (string) $lat !== (string) $existing['latitude']) {
+            try {
+                (new AiLocationService())->generateForItem($id);
+            } catch (\Throwable $e) {
+                error_log('FoundIt AI hints error (update): ' . $e->getMessage());
+            }
+        }
 
         return $this->fetchOne($response, $id, 200);
     }
@@ -342,9 +377,60 @@ class ItemController
         ], 200);
     }
 
+    // POST /api/items/{id}/ai-hints   (JWT, owner only) — re-run the local
+    // "AI" location scorer on demand and return the fresh hints.
+    public function regenerateHints(Request $request, Response $response, array $args): Response
+    {
+        $userId = (int) $request->getAttribute('user_id');
+        $id     = (int) $args['id'];
+        $pdo    = Database::pdo();
+
+        $stmt = $pdo->prepare('SELECT user_id FROM items WHERE id = ?');
+        $stmt->execute([$id]);
+        $item = $stmt->fetch();
+        if (!$item) {
+            return $this->json($response, ['error' => 'Item not found.'], 404);
+        }
+        if ((int) $item['user_id'] !== $userId && $request->getAttribute('role') !== 'admin') {
+            return $this->json($response, ['error' => 'You can only refresh hints for your own item.'], 403);
+        }
+
+        try {
+            $payload = (new AiLocationService())->generateForItem($id);
+        } catch (\Throwable $e) {
+            error_log('FoundIt AI hints error (regenerate): ' . $e->getMessage());
+            return $this->json($response, ['error' => 'Could not generate location hints.'], 500);
+        }
+
+        return $this->json($response, ['ai_location_hints' => $payload], 200);
+    }
+
     // ---------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------
+
+    /**
+     * Extract validated [latitude, longitude] from the request data.
+     * Returns [null, null] when both are absent/blank; partial or out-of-range
+     * values are treated as "no point" so a bad map click never blocks a report.
+     */
+    private function coords(array $data): array
+    {
+        $lat = $data['latitude'] ?? null;
+        $lng = $data['longitude'] ?? null;
+        if ($lat === null || $lng === null || $lat === '' || $lng === '') {
+            return [null, null];
+        }
+        if (!is_numeric($lat) || !is_numeric($lng)) {
+            return [null, null];
+        }
+        $lat = (float) $lat;
+        $lng = (float) $lng;
+        if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+            return [null, null];
+        }
+        return [$lat, $lng];
+    }
 
     /** Validate item input; returns an array of field => message (empty if valid). */
     private function validate(array $data): array
@@ -390,7 +476,17 @@ class ItemController
              WHERE i.id = ?'
         );
         $stmt->execute([$id]);
-        return $this->json($response, ['item' => $stmt->fetch()], $status);
+        return $this->json($response, ['item' => $this->hydrate($stmt->fetch())], $status);
+    }
+
+    /** Decode the stored ai_location_hints JSON into an object for the client. */
+    private function hydrate($item)
+    {
+        if (is_array($item) && array_key_exists('ai_location_hints', $item)) {
+            $decoded = json_decode((string) $item['ai_location_hints'], true);
+            $item['ai_location_hints'] = is_array($decoded) ? $decoded : null;
+        }
+        return $item;
     }
 
     /** Absolute path to the public uploads directory. */
