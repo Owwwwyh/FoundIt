@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import http, { imageUrl } from '../api/http'
 import { useAuthStore } from '../store/auth'
+import LocationMap from '../components/LocationMap.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -12,6 +13,16 @@ const loading = ref(true)
 const error = ref('')
 const claims = ref([])
 const matches = ref([])
+const hintsLoading = ref(false)
+
+// The pinned point ({ lat, lng } | null) and the AI location-hint payload.
+const point = computed(() => {
+  const lat = item.value?.latitude, lng = item.value?.longitude
+  return lat != null && lng != null ? { lat: +lat, lng: +lng } : null
+})
+const ai = computed(() => item.value?.ai_location_hints || null)
+const aiHints = computed(() => ai.value?.hints || [])
+const hasMap = computed(() => !!point.value || aiHints.value.some(h => h.latitude != null))
 
 const claimMessage = ref('')
 const claimError = ref('')
@@ -82,6 +93,19 @@ async function review(claim, status) {
   }
 }
 
+async function refreshHints() {
+  if (!item.value) return
+  hintsLoading.value = true
+  try {
+    const { data } = await http.post(`/items/${item.value.id}/ai-hints`)
+    item.value = { ...item.value, ai_location_hints: data.ai_location_hints }
+  } catch (e) {
+    alert('Could not refresh suggestions.')
+  } finally {
+    hintsLoading.value = false
+  }
+}
+
 onMounted(load)
 // Re-fetch when navigating between item pages (e.g. clicking a match card) —
 // Vue reuses this component, so onMounted alone won't fire again.
@@ -115,6 +139,15 @@ watch(() => route.params.id, load)
       </div>
 
       <p class="description">{{ item.description || 'No description provided.' }}</p>
+
+      <div v-if="hasMap" class="map-block">
+        <h3 class="map-title">On the campus map</h3>
+        <LocationMap :modelValue="point" :hints="aiHints" :editable="false" height="300px" />
+        <p v-if="aiHints.some(h => h.latitude != null)" class="map-legend muted small">
+          <template v-if="point"><span class="dot dot-pin"></span> Reported point</template>
+          <span class="dot dot-hint"></span> AI-suggested places
+        </p>
+      </div>
 
       <div class="poster">
         <span class="avatar-lg">{{ posterInitial }}</span>
@@ -160,6 +193,39 @@ watch(() => route.params.id, load)
             <button class="btn btn-danger btn-sm" @click="review(c, 'rejected')">Reject</button>
           </div>
         </div>
+      </div>
+
+      <!-- AI location suggestions (local probabilistic scorer) -->
+      <div v-if="ai" class="panel ai-panel">
+        <div class="panel-head">
+          <h3>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6.3 6.3 4.9 4.9M19.1 19.1l-1.4-1.4M17.7 6.3l1.4-1.4M4.9 19.1l1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg>
+            AI location hints
+          </h3>
+          <span v-if="ai.source === 'openai'" class="ai-tag">OpenAI</span>
+          <span v-else class="ai-tag ai-tag--local">On-device</span>
+        </div>
+
+        <p v-if="ai.summary" class="ai-summary">{{ ai.summary }}</p>
+
+        <ol v-if="aiHints.length" class="ai-list">
+          <li v-for="(h, i) in aiHints" :key="i" class="ai-hint">
+            <div class="ai-hint-top">
+              <span class="ai-rank">{{ i + 1 }}</span>
+              <strong class="ai-loc">{{ h.location }}</strong>
+              <span class="ai-score">{{ h.score }}%</span>
+            </div>
+            <div class="ai-bar"><span :style="{ width: h.score + '%' }"></span></div>
+            <div class="ai-why">
+              <span v-for="(r, ri) in h.reasons" :key="ri" class="why-pill">{{ r }}</span>
+            </div>
+          </li>
+        </ol>
+        <p v-else class="muted small">No location hints yet.</p>
+
+        <button v-if="isOwner" class="btn btn-sm ai-refresh" :disabled="hintsLoading" @click="refreshHints">
+          {{ hintsLoading ? 'Analysing…' : 'Refresh suggestions' }}
+        </button>
       </div>
     </aside>
 
@@ -238,6 +304,35 @@ watch(() => route.params.id, load)
 .match-why{ display:flex; flex-wrap:wrap; gap:5px; }
 .why-pill{ background:var(--brand-100); color:var(--brand-700); font-size:.72rem; font-weight:600;
   padding:2px 9px; border-radius:999px; }
+
+/* Campus map block */
+.map-block{ margin:0 0 24px; }
+.map-title{ margin:0 0 10px; font-size:1.05rem; }
+.map-legend{ display:flex; align-items:center; gap:8px; margin:10px 0 0; flex-wrap:wrap; }
+.map-legend .dot{ width:11px; height:11px; border-radius:50%; display:inline-block; margin-left:6px; }
+.map-legend .dot-pin{ background:#2A81CB; margin-left:0; }
+.map-legend .dot-hint{ background:var(--accent); }
+
+/* AI location hints panel */
+.ai-panel .panel-head{ gap:8px; }
+.ai-panel .panel-head h3{ display:inline-flex; align-items:center; gap:7px; }
+.ai-tag{ font-size:.66rem; font-weight:800; text-transform:uppercase; letter-spacing:.6px;
+  background:var(--brand-100); color:var(--brand-700); padding:3px 9px; border-radius:999px; }
+.ai-tag--local{ background:var(--accent-100); color:#A8631A; }
+.ai-summary{ background:var(--paper); border:1px solid var(--line); border-radius:11px;
+  padding:11px 13px; margin:4px 0 14px; font-size:.92rem; line-height:1.5; }
+.ai-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px; }
+.ai-hint-top{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.ai-rank{ width:21px; height:21px; flex:none; border-radius:50%; background:var(--brand); color:#fff;
+  display:grid; place-items:center; font-size:.74rem; font-weight:800; }
+.ai-loc{ flex:1; min-width:0; font-size:.96rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ai-score{ font-weight:800; color:var(--brand-700); font-size:.86rem; }
+.ai-bar{ height:7px; background:var(--paper-2); border-radius:999px; overflow:hidden; margin-bottom:8px; }
+.ai-bar span{ display:block; height:100%; background:linear-gradient(90deg, var(--accent), var(--brand)); border-radius:999px; }
+.ai-why{ display:flex; flex-wrap:wrap; gap:5px; }
+.ai-why .why-pill{ background:var(--brand-100); color:var(--brand-700); font-size:.72rem; font-weight:600;
+  padding:2px 9px; border-radius:999px; }
+.ai-refresh{ margin-top:16px; width:100%; }
 
 @media (max-width:820px){
   .detail{ grid-template-columns:1fr; }
