@@ -57,9 +57,9 @@ class AuthController
         $stmt->execute([$name, $email, $hash]);
         $id = (int) $pdo->lastInsertId();
 
-        // Never return the password hash
+        // Never return the password hash. New accounts are always normal users.
         return $this->json($response, [
-            'user' => ['id' => $id, 'name' => $name, 'email' => $email],
+            'user' => ['id' => $id, 'name' => $name, 'email' => $email, 'role' => 'user'],
         ], 201);
     }
 
@@ -76,7 +76,7 @@ class AuthController
         }
 
         $pdo  = Database::pdo();
-        $stmt = $pdo->prepare('SELECT id, name, email, password_hash FROM users WHERE email = ?');
+        $stmt = $pdo->prepare('SELECT id, name, email, password_hash, role FROM users WHERE email = ?');
         $stmt->execute([$email]);
         $user = $stmt->fetch();
 
@@ -85,11 +85,14 @@ class AuthController
             return $this->json($response, ['error' => 'Invalid email or password.'], 401);
         }
 
+        $role = $user['role'] ?? 'user';
+
         // --- Build and sign the JWT ---
         $now = time();
         $payload = [
             'sub'  => $user['id'],               // the user id (read by JwtMiddleware)
             'name' => $user['name'],
+            'role' => $role,                     // 'user' | 'admin' (role-based authorization)
             'iat'  => $now,                      // issued at
             'exp'  => $now + (int) $_ENV['JWT_EXPIRY'],  // expires
         ];
@@ -97,7 +100,7 @@ class AuthController
 
         return $this->json($response, [
             'token' => $token,
-            'user'  => ['id' => $user['id'], 'name' => $user['name'], 'email' => $user['email']],
+            'user'  => ['id' => $user['id'], 'name' => $user['name'], 'email' => $user['email'], 'role' => $role],
         ], 200);
     }
 

@@ -26,9 +26,11 @@ class JwtMiddleware
 
         try {
             $decoded = JWT::decode($m[1], new Key($_ENV['JWT_SECRET'], 'HS256'));
-            // Make the logged-in user's id available to controllers:
-            //   $request->getAttribute('user_id')
+            // Make the logged-in user available to controllers + later middleware:
+            //   $request->getAttribute('user_id')  ·  $request->getAttribute('role')
+            // Tokens issued before roles existed simply default to 'user'.
             $request = $request->withAttribute('user_id', $decoded->sub);
+            $request = $request->withAttribute('role', $decoded->role ?? 'user');
         } catch (\Throwable $e) {
             return $this->unauthorized('Invalid or expired token');
         }

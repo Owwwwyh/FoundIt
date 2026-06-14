@@ -42,6 +42,7 @@ watch(() => route.fullPath, () => { menuOpen.value = false })
         <router-link to="/" @click="menuOpen = false">Browse</router-link>
         <router-link v-if="auth.isLoggedIn" to="/post" @click="menuOpen = false">Report Item</router-link>
         <router-link v-if="auth.isLoggedIn" to="/dashboard" @click="menuOpen = false">Dashboard</router-link>
+        <router-link v-if="auth.isAdmin" to="/admin" class="nav-admin" @click="menuOpen = false">Admin</router-link>
         <router-link v-if="!auth.isLoggedIn" to="/login" class="nav-cta" @click="menuOpen = false">Log in</router-link>
         <span v-else class="navuser">
           <span class="who"><span class="avatar">{{ initial }}</span><span class="who-name">{{ auth.user?.name }}</span></span>
@@ -129,6 +130,9 @@ p{ margin:.55em 0; }
 .nav-links a.router-link-exact-active{ color:var(--brand); }
 .nav-cta{ background:var(--ink); color:#fff !important; }
 .nav-cta:hover{ background:var(--brand) !important; color:#fff !important; }
+.nav-admin{ color:var(--accent) !important; }
+.nav-admin:hover{ color:#A8631A !important; background:var(--accent-100); }
+.nav-admin.router-link-exact-active{ color:#A8631A !important; }
 .navuser{ display:inline-flex; align-items:center; gap:6px; margin-left:8px;
   padding-left:12px; border-left:1px solid var(--line); }
 .who{ display:inline-flex; align-items:center; gap:8px; font-weight:600; color:var(--ink); font-size:.92rem; }
