@@ -27,7 +27,8 @@ Frontend hosted on **Vercel** · backend + **MySQL** on **AlwaysData**.
 - 🤝 **Smart match suggestions** — opening a *lost* item suggests likely matching *found* items (and vice versa), ranked by category, shared keywords, location and date
 
 **Advanced add-ons**
-- 🛡️ **Admin role + moderation dashboard** — a second role beyond normal users. Admins get a `/admin` dashboard with campus-wide stats (totals, **resolved rate**, items by status/category, claim counts) and can moderate **any** item (force status / delete). Enforced server-side with role-based JWT + `AdminMiddleware`, on top of the existing per-owner checks.
+- 🛡️ **Admin role + moderation dashboard** — a second role beyond normal users. Admins get a `/admin` dashboard with campus-wide stats (totals, **resolved rate**, items by status/category, claim counts) and can moderate **any** item (force status / delete). Includes a **users & their missing items** table — every user's reported-lost belongings with the last location each was seen and how long it has been missing (*time to be found*, which flips to "Found" once resolved), with search/status filtering. Enforced server-side with role-based JWT + `AdminMiddleware`, on top of the existing per-owner checks.
+- 🏆 **"Most lost" podium** — the home page shows a gold/silver/bronze podium of the top-3 categories students lose most, ranked live from the database. Hidden automatically when there's no data.
 - 🗺️ **Campus map location picker** — pin where an item was lost/found on an interactive **Leaflet** + OpenStreetMap map when reporting it; the point (and AI-suggested places) are shown on the item page. Ties the app directly to "campus."
 - 🤖 **AI location hints** — a **local probabilistic scorer** ranks the places a user has recently been to and suggests where an item is likely to turn up. It blends four signals: *temporal proximity* to the report date, *visit frequency*, *category/keyword affinity*, and optional *distance clustering* (Haversine) when map points exist. Results are stored on the item as `ai_location_hints`. If `OPENAI_API_KEY` is set it adds a short natural-language summary, with a **graceful offline fallback** when it isn't.
 
@@ -53,8 +54,10 @@ Frontend hosted on **Vercel** · backend + **MySQL** on **AlwaysData**.
 | DELETE | `/api/claims/{id}` | JWT (claimant) | Withdraw my claim |
 | GET | `/api/me/items` | JWT | Items I posted |
 | GET | `/api/me/claims` | JWT | Claims I filed |
+| GET | `/api/lost-leaderboard` | – | Top-3 most-lost categories (home podium) |
 | GET | `/api/admin/stats` | JWT (admin) | Moderation stats — totals, resolved rate *(advanced)* |
 | GET | `/api/admin/items` | JWT (admin) | List every item (`?type=`, `?status=`, `?search=`) *(advanced)* |
+| GET | `/api/admin/lost-items` | JWT (admin) | Each user's missing items + last location + days missing *(advanced)* |
 | PUT | `/api/admin/items/{id}` | JWT (admin) | Force an item's status *(advanced)* |
 | DELETE | `/api/admin/items/{id}` | JWT (admin) | Remove any item *(advanced)* |
 | GET | `/api/admin/users` | JWT (admin) | List accounts *(advanced)* |
@@ -168,6 +171,8 @@ Open http://localhost:5173.
 - [ ] Open a lost item → "Possible matches" lists likely found items *(bonus #3)*
 - [ ] Report an item → drop a pin on the campus map → it shows on the item page *(advanced: map picker)*
 - [ ] Open an item → "AI location hints" lists ranked places with reasons; owner can refresh *(advanced: AI scorer)*
+- [ ] Home page shows the **"Most lost"** podium (gold/silver/bronze top-3 lost categories)
 - [ ] Log in as `admin@example.com` → "Admin" link appears → dashboard shows stats and can delete any item *(advanced: admin role)*
+- [ ] Admin console shows the **users & their missing items** table (last location + time to be found + search/status filter)
 - [ ] Log in as a normal user → opening `/admin` redirects home; `GET /api/admin/stats` → **403** *(role-based authorization)*
 - [ ] Works at the live public URL

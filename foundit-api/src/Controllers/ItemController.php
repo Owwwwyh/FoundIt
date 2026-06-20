@@ -59,6 +59,26 @@ class ItemController
         return $this->json($response, ['items' => $stmt->fetchAll()], 200);
     }
 
+    // GET /api/lost-leaderboard   (public) — top-3 most-lost categories.
+    // Backs the home-page gold/silver/bronze podium.
+    public function leaderboard(Request $request, Response $response): Response
+    {
+        $stmt = Database::pdo()->query(
+            "SELECT category, COUNT(*) AS count
+             FROM items
+             WHERE type = 'lost'
+             GROUP BY category
+             ORDER BY count DESC, category ASC
+             LIMIT 3"
+        );
+
+        $podium = array_map(static function (array $r): array {
+            return ['category' => $r['category'], 'count' => (int) $r['count']];
+        }, $stmt->fetchAll());
+
+        return $this->json($response, ['podium' => $podium], 200);
+    }
+
     // GET /api/items/{id}   (public)
     public function show(Request $request, Response $response, array $args): Response
     {

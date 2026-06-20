@@ -22,6 +22,7 @@ return function (App $app) {
         $group->post('/forgot-password',  [AuthController::class, 'forgotPassword']);
         $group->post('/reset-password',   [AuthController::class, 'resetPassword']);
         $group->get('/items',              [ItemController::class, 'index']);
+        $group->get('/lost-leaderboard',   [ItemController::class, 'leaderboard']);
         $group->get('/items/{id}',         [ItemController::class, 'show']);
         $group->get('/items/{id}/matches', [ItemController::class, 'matches']);
 
@@ -48,6 +49,7 @@ return function (App $app) {
         $group->group('/admin', function ($a) {
             $a->get('/stats',          [AdminController::class, 'stats']);
             $a->get('/items',          [AdminController::class, 'items']);
+            $a->get('/lost-items',     [AdminController::class, 'lostItems']);
             $a->put('/items/{id}',     [AdminController::class, 'updateItem']);
             $a->delete('/items/{id}',  [AdminController::class, 'destroyItem']);
             $a->get('/users',          [AdminController::class, 'users']);

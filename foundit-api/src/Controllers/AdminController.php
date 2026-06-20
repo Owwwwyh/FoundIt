@@ -120,6 +120,29 @@ class AdminController
         return $this->json($response, ['items' => $stmt->fetchAll()], 200);
     }
 
+    // GET /api/admin/lost-items   — every user's reported-lost items.
+    // Powers the missing-items table: user info, last-seen location, and how
+    // many days the item has been missing (until resolved).
+    public function lostItems(Request $request, Response $response): Response
+    {
+        $stmt = Database::pdo()->query(
+            "SELECT i.id, i.title, i.category, i.status, i.date_reported,
+                    i.location AS last_location,
+                    DATEDIFF(CURDATE(), i.date_reported) AS days_missing,
+                    u.id AS user_id, u.name AS user_name, u.email AS user_email
+             FROM items i JOIN users u ON u.id = i.user_id
+             WHERE i.type = 'lost'
+             ORDER BY (i.status = 'resolved') ASC, i.date_reported ASC, u.name ASC"
+        );
+
+        $rows = array_map(static function (array $r): array {
+            $r['days_missing'] = (int) $r['days_missing'];
+            return $r;
+        }, $stmt->fetchAll());
+
+        return $this->json($response, ['items' => $rows], 200);
+    }
+
     // DELETE /api/admin/items/{id}   — admins can remove any item.
     public function destroyItem(Request $request, Response $response, array $args): Response
     {
