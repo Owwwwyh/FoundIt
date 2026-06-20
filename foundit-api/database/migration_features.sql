@@ -4,15 +4,27 @@
 --   2. Campus map location picker (latitude / longitude)
 --   3. Local "AI" location scorer  (ai_location_hints)
 --
--- Run this against an EXISTING `foundit` database (one that was created
--- before these features existed) so you don't have to drop your data:
+-- Run this against an EXISTING database (one that was created before these
+-- features existed) so you don't have to drop your data. The target database
+-- is whichever one you select on the command line — this script does NOT hard-
+-- code a database name, so it works for both the local `foundit` and the live
+-- AlwaysData `foundit261_foundit` database:
 --
+--     # local
 --     mysql -u root -p foundit < database/migration_features.sql
 --
+--     # live (AlwaysData)
+--     mysql -h mysql-foundit261.alwaysdata.net -u foundit261 -p \
+--           foundit261_foundit < database/migration_features.sql
+--
+-- All the information_schema checks below use DATABASE(), so they resolve
+-- against the database you selected at connection time.
 -- It is safe to re-run: each ALTER/UPDATE is written to be idempotent.
 -- ======================================================================
 
-USE foundit;
+-- NOTE: no `USE <db>;` here on purpose — the database is selected at connection
+-- time (the last argument to the mysql client), so this migration is portable
+-- across environments with differently named databases.
 
 -- ---------- 1. Admin role ----------
 -- Add the role column only if it isn't there yet.

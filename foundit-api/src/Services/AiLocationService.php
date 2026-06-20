@@ -112,7 +112,12 @@ class AiLocationService
             }
         }
 
-        $maxVisits  = max(1, ...array_map(static fn ($p) => $p['visits'], $places ?: [['visits' => 1]]));
+        // NOTE: $places is keyed by place name (an associative array). Spreading
+        // it into max() with `...` would make PHP 8.1+ read the string keys as
+        // named arguments and throw, so pull a plain 0-indexed list of the
+        // visit counts first (array_column re-indexes) before taking the max.
+        $visitCounts = array_column($places, 'visits');
+        $maxVisits   = $visitCounts ? max($visitCounts) : 1;
         $itemWords  = $this->keywords($item['category'] . ' ' . $item['title'] . ' ' . ($item['description'] ?? ''));
         $hasItemGeo = $item['latitude'] !== null && $item['longitude'] !== null;
 
