@@ -31,6 +31,28 @@ const claimOk = ref('')
 const isOwner = computed(() => auth.isLoggedIn && item.value && auth.userId === item.value.user_id)
 const posterInitial = computed(() => (item.value?.poster_name || '?').trim().charAt(0).toUpperCase())
 
+// Claim copy depends on the post type. On a "found" post the responder is the
+// owner ("This is mine"); on a "lost" post the responder is whoever found it.
+const claimCopy = computed(() => item.value?.type === 'lost'
+  ? {
+      heading: 'I found this',
+      sub: 'Tell the poster how and where you found it — it goes straight to them.',
+      placeholder: 'e.g. I found this near the library entrance on Monday…',
+      button: 'Notify the owner',
+      loginHeading: 'Did you find this?',
+      loginSub: 'Log in to let the owner know you found it.',
+      loginBtn: 'Log in to respond',
+    }
+  : {
+      heading: 'This is mine',
+      sub: 'Describe proof of ownership — it goes straight to the poster.',
+      placeholder: 'e.g. It has my initials engraved near the cap…',
+      button: 'Submit claim',
+      loginHeading: 'Is this yours?',
+      loginSub: 'Log in to file a claim on this item.',
+      loginBtn: 'Log in to claim',
+    })
+
 function formatDate(d) {
   if (!d) return ''
   const dt = new Date(d)
@@ -161,18 +183,18 @@ watch(() => route.params.id, load)
     <!-- Side: claim / owner review / login prompt -->
     <aside class="detail-side">
       <div v-if="auth.isLoggedIn && !isOwner" class="panel">
-        <h3>This is mine</h3>
-        <p class="muted small">Describe proof of ownership — it goes straight to the poster.</p>
-        <textarea v-model="claimMessage" rows="4" placeholder="e.g. It has my initials engraved near the cap…"></textarea>
+        <h3>{{ claimCopy.heading }}</h3>
+        <p class="muted small">{{ claimCopy.sub }}</p>
+        <textarea v-model="claimMessage" rows="4" :placeholder="claimCopy.placeholder"></textarea>
         <p v-if="claimError" class="err">{{ claimError }}</p>
         <p v-if="claimOk" class="ok">{{ claimOk }}</p>
-        <button class="btn btn-primary btn-block" @click="submitClaim">Submit claim</button>
+        <button class="btn btn-primary btn-block" @click="submitClaim">{{ claimCopy.button }}</button>
       </div>
 
       <div v-else-if="!auth.isLoggedIn" class="panel login-prompt">
-        <h3>Is this yours?</h3>
-        <p class="muted">Log in to file a claim on this item.</p>
-        <router-link class="btn btn-primary btn-block" to="/login">Log in to claim</router-link>
+        <h3>{{ claimCopy.loginHeading }}</h3>
+        <p class="muted">{{ claimCopy.loginSub }}</p>
+        <router-link class="btn btn-primary btn-block" to="/login">{{ claimCopy.loginBtn }}</router-link>
       </div>
 
       <div v-if="isOwner" class="panel">
