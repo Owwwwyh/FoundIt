@@ -11,6 +11,9 @@ A full-stack single-page web app for SECJ3483 Web Technology.
 
 Frontend hosted on **Vercel** · backend + **MySQL** on **AlwaysData**.
 
+> **CI/CD:** the GitHub repo is connected to Vercel — every push to `main` automatically
+> builds and deploys the frontend (root directory `foundit-app/`). No manual deploy step.
+
 ## ✨ Features
 
 **Core**
