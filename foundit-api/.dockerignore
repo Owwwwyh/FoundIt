@@ -1,0 +1,10 @@
+# Keep VCS noise and local dev secrets out of the image.
+# vendor/ is installed fresh by Composer in the Dockerfile, so don't copy the host copy.
+.git
+.gitignore
+.env
+.env.example
+.dockerignore
+vendor/
+*.md
+*.log
