@@ -12,6 +12,7 @@ const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 const justRegistered = route.query.registered === '1'
+const justReset = route.query.reset === '1'
 
 async function submit() {
   error.value = ''
@@ -44,6 +45,7 @@ async function submit() {
       <p class="auth-sub">Log in to report items and manage your claims.</p>
 
       <p v-if="justRegistered" class="ok">Account created — please log in.</p>
+      <p v-if="justReset" class="ok">Your password has been reset — please log in with your new password.</p>
 
       <form @submit.prevent="submit">
         <div class="field">
@@ -54,6 +56,7 @@ async function submit() {
           <label>Password</label>
           <input type="password" v-model="password" placeholder="••••••••" autocomplete="current-password" />
         </div>
+        <p class="forgot-row"><router-link to="/forgot-password">Forgot password?</router-link></p>
         <p v-if="error" class="err">{{ error }}</p>
         <button class="btn btn-primary btn-block" :disabled="loading">{{ loading ? 'Logging in…' : 'Log in' }}</button>
       </form>
@@ -74,6 +77,7 @@ async function submit() {
 .auth-mark svg{ width:27px; height:27px; }
 .auth-card h1{ font-size:1.85rem; margin:0 0 6px; }
 .auth-sub{ color:var(--ink-2); margin:0 0 24px; }
+.forgot-row{ text-align:right; margin:-6px 0 14px; font-size:.86rem; }
 .auth-alt{ margin:22px 0 0; color:var(--ink-2); font-size:.94rem; }
 .demo-hint{ text-align:center; color:var(--ink-2); font-size:.82rem; margin-top:18px; }
 .demo-hint code{ background:var(--paper-2); padding:2px 7px; border-radius:6px; font-size:.92em; color:var(--ink); }

@@ -10,11 +10,14 @@ namespace App\Controllers;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 use App\Database;
+use App\Services\AiLocationService;
 
 class ItemController
 {
     private const TYPES    = ['lost', 'found'];
     private const STATUSES = ['open', 'claimed', 'resolved'];
+    private const MAX_IMAGE_BYTES = 2097152; // 2 MB
+    private const IMAGE_TYPES = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
 
     // GET /api/items   (public) — supports ?type= &category= &search= &status=
     public function index(Request $request, Response $response): Response
@@ -56,6 +59,26 @@ class ItemController
         return $this->json($response, ['items' => $stmt->fetchAll()], 200);
     }
 
+    // GET /api/lost-leaderboard   (public) — top-3 most-lost categories.
+    // Backs the home-page gold/silver/bronze podium.
+    public function leaderboard(Request $request, Response $response): Response
+    {
+        $stmt = Database::pdo()->query(
+            "SELECT category, COUNT(*) AS count
+             FROM items
+             WHERE type = 'lost'
+             GROUP BY category
+             ORDER BY count DESC, category ASC
+             LIMIT 3"
+        );
+
+        $podium = array_map(static function (array $r): array {
+            return ['category' => $r['category'], 'count' => (int) $r['count']];
+        }, $stmt->fetchAll());
+
+        return $this->json($response, ['podium' => $podium], 200);
+    }
+
     // GET /api/items/{id}   (public)
     public function show(Request $request, Response $response, array $args): Response
     {
@@ -70,7 +93,7 @@ class ItemController
         if (!$item) {
             return $this->json($response, ['error' => 'Item not found.'], 404);
         }
-        return $this->json($response, ['item' => $item], 200);
+        return $this->json($response, ['item' => $this->hydrate($item)], 200);
     }
 
     // POST /api/items   (JWT)
@@ -84,10 +107,12 @@ class ItemController
             return $this->json($response, ['errors' => $errors], 422);
         }
 
+        [$lat, $lng] = $this->coords($data);
+
         $pdo  = Database::pdo();
         $stmt = $pdo->prepare(
-            'INSERT INTO items (user_id, title, description, category, type, location, status, date_reported)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO items (user_id, title, description, category, type, location, status, latitude, longitude, date_reported)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $userId,
@@ -97,10 +122,21 @@ class ItemController
             $data['type'],
             trim($data['location']),
             !empty($data['status']) ? $data['status'] : 'open',
+            $lat,
+            $lng,
             !empty($data['date_reported']) ? $data['date_reported'] : date('Y-m-d'),
         ]);
 
-        return $this->fetchOne($response, (int) $pdo->lastInsertId(), 201);
+        $newId = (int) $pdo->lastInsertId();
+
+        // Feature: run the local "AI" location scorer for the new item (best-effort).
+        try {
+            (new AiLocationService())->generateForItem($newId);
+        } catch (\Throwable $e) {
+            error_log('FoundIt AI hints error (store): ' . $e->getMessage());
+        }
+
+        return $this->fetchOne($response, $newId, 201);
     }
 
     // PUT /api/items/{id}   (JWT, owner only)
@@ -128,9 +164,18 @@ class ItemController
             return $this->json($response, ['errors' => $errors], 422);
         }
 
+        // Coordinates: accept new ones, otherwise keep what was stored.
+        [$lat, $lng] = $this->coords($data);
+        if ($lat === null && $lng === null
+            && !array_key_exists('latitude', $data) && !array_key_exists('longitude', $data)) {
+            $lat = $existing['latitude'];
+            $lng = $existing['longitude'];
+        }
+
         $stmt = $pdo->prepare(
             'UPDATE items
-             SET title = ?, description = ?, category = ?, type = ?, location = ?, status = ?, date_reported = ?
+             SET title = ?, description = ?, category = ?, type = ?, location = ?, status = ?,
+                 latitude = ?, longitude = ?, date_reported = ?
              WHERE id = ?'
         );
         $stmt->execute([
@@ -141,9 +186,21 @@ class ItemController
             trim($data['location']),
             // keep the existing value when the field is omitted
             !empty($data['status']) ? $data['status'] : $existing['status'],
+            $lat,
+            $lng,
             !empty($data['date_reported']) ? $data['date_reported'] : $existing['date_reported'],
             $id,
         ]);
+
+        // Refresh AI location hints if the location/coordinates changed (best-effort).
+        if (trim($data['location']) !== ($existing['location'] ?? '')
+            || (string) $lat !== (string) $existing['latitude']) {
+            try {
+                (new AiLocationService())->generateForItem($id);
+            } catch (\Throwable $e) {
+                error_log('FoundIt AI hints error (update): ' . $e->getMessage());
+            }
+        }
 
         return $this->fetchOne($response, $id, 200);
     }
@@ -155,7 +212,7 @@ class ItemController
         $id     = (int) $args['id'];
         $pdo    = Database::pdo();
 
-        $stmt = $pdo->prepare('SELECT user_id FROM items WHERE id = ?');
+        $stmt = $pdo->prepare('SELECT user_id, image_path FROM items WHERE id = ?');
         $stmt->execute([$id]);
         $row = $stmt->fetch();
 
@@ -167,7 +224,82 @@ class ItemController
         }
 
         $pdo->prepare('DELETE FROM items WHERE id = ?')->execute([$id]);
+
+        // best-effort: remove the item's uploaded image file too
+        if (!empty($row['image_path'])) {
+            $this->deleteImageFile($row['image_path']);
+        }
         return $response->withStatus(204);   // No Content
+    }
+
+    // POST /api/items/{id}/image   (JWT, owner only) — upload/replace the item photo
+    public function uploadImage(Request $request, Response $response, array $args): Response
+    {
+        $userId = (int) $request->getAttribute('user_id');
+        $id     = (int) $args['id'];
+        $pdo    = Database::pdo();
+
+        $stmt = $pdo->prepare('SELECT user_id, image_path FROM items WHERE id = ?');
+        $stmt->execute([$id]);
+        $item = $stmt->fetch();
+        if (!$item) {
+            return $this->json($response, ['error' => 'Item not found.'], 404);
+        }
+        if ((int) $item['user_id'] !== $userId) {
+            return $this->json($response, ['error' => 'You can only add a photo to your own item.'], 403);
+        }
+
+        // The file is sent as multipart/form-data under the field name "image"
+        $file = $request->getUploadedFiles()['image'] ?? null;
+        if (!$file) {
+            return $this->json($response, ['errors' => ['image' => 'Please choose an image file.']], 422);
+        }
+        if ($file->getError() !== UPLOAD_ERR_OK) {
+            $tooBig = in_array($file->getError(), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true);
+            return $this->json($response, ['errors' => ['image' =>
+                $tooBig ? 'The image is too large (max 2 MB).' : 'The image upload failed. Please try again.']], 422);
+        }
+        if ((int) $file->getSize() > self::MAX_IMAGE_BYTES) {
+            return $this->json($response, ['errors' => ['image' => 'Image must be 2 MB or smaller.']], 422);
+        }
+
+        // Read the bytes and verify it is really an image (not just a renamed file)
+        try {
+            $contents = (string) $file->getStream();
+        } catch (\Throwable $e) {
+            return $this->json($response, ['error' => 'Could not read the uploaded image.'], 500);
+        }
+        // Defense-in-depth: verify the real byte length too (getSize() can be null)
+        if (strlen($contents) > self::MAX_IMAGE_BYTES) {
+            return $this->json($response, ['errors' => ['image' => 'Image must be 2 MB or smaller.']], 422);
+        }
+        $info = @getimagesizefromstring($contents);
+        if ($info === false || !isset(self::IMAGE_TYPES[$info['mime'] ?? ''])) {
+            return $this->json($response, ['errors' => ['image' => 'Allowed image types: JPG, PNG, WEBP, GIF.']], 422);
+        }
+        $ext = self::IMAGE_TYPES[$info['mime']];
+
+        // Save the file under the public /uploads folder with a safe random name
+        try {
+            $dir = $this->uploadsDir();
+            if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+                throw new \RuntimeException('Cannot create uploads directory.');
+            }
+            $filename = 'item' . $id . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
+            if (@file_put_contents($dir . '/' . $filename, $contents) === false) {
+                throw new \RuntimeException('Cannot write image file.');
+            }
+        } catch (\Throwable $e) {
+            return $this->json($response, ['error' => 'Could not save the image. Please try again.'], 500);
+        }
+
+        // Replace any previous image, then store the new path
+        if (!empty($item['image_path'])) {
+            $this->deleteImageFile($item['image_path']);
+        }
+        $pdo->prepare('UPDATE items SET image_path = ? WHERE id = ?')->execute(['/uploads/' . $filename, $id]);
+
+        return $this->fetchOne($response, $id, 200);
     }
 
     // GET /api/me/items   (JWT) — items posted by the logged-in user
@@ -182,9 +314,143 @@ class ItemController
         return $this->json($response, ['items' => $stmt->fetchAll()], 200);
     }
 
+    // GET /api/items/{id}/matches   (public) — Feature #3: smart match suggestions.
+    // For a "lost" item, suggest open "found" items that look like the same thing
+    // (and vice versa), ranked by a simple relevance score.
+    public function matches(Request $request, Response $response, array $args): Response
+    {
+        $id  = (int) $args['id'];
+        $pdo = Database::pdo();
+
+        $stmt = $pdo->prepare('SELECT * FROM items WHERE id = ?');
+        $stmt->execute([$id]);
+        $source = $stmt->fetch();
+        if (!$source) {
+            return $this->json($response, ['error' => 'Item not found.'], 404);
+        }
+
+        // A lost item is matched against found items, and vice versa.
+        $opposite = $source['type'] === 'lost' ? 'found' : 'lost';
+
+        // Candidate pool: opposite type, still open, excluding this item itself.
+        $stmt = $pdo->prepare(
+            "SELECT i.*, u.name AS poster_name
+             FROM items i JOIN users u ON u.id = i.user_id
+             WHERE i.type = ? AND i.status = 'open' AND i.id <> ?"
+        );
+        $stmt->execute([$opposite, $id]);
+        $candidates = $stmt->fetchAll();
+
+        $sourceWords = $this->keywords($source['title'] . ' ' . ($source['description'] ?? ''));
+
+        $matches = [];
+        foreach ($candidates as $cand) {
+            $score   = 0;
+            $reasons = [];
+
+            // Same category is a strong signal.
+            if (strcasecmp(trim($source['category']), trim($cand['category'])) === 0) {
+                $score    += 3;
+                $reasons[] = 'Same category (' . $cand['category'] . ')';
+            }
+
+            // Shared keywords in the title/description.
+            $candWords = $this->keywords($cand['title'] . ' ' . ($cand['description'] ?? ''));
+            $shared    = array_values(array_intersect($sourceWords, $candWords));
+            if ($shared) {
+                $score    += 2 * count($shared);
+                $reasons[] = 'Mentions "' . implode('", "', array_slice($shared, 0, 3)) . '"';
+            }
+
+            // Same / overlapping location text.
+            if (array_intersect($this->keywords($source['location']), $this->keywords($cand['location']))) {
+                $score    += 1;
+                $reasons[] = 'Nearby location';
+            }
+
+            // Reported around the same time (within a week).
+            $apart = $this->daysApart($source['date_reported'], $cand['date_reported']);
+            if ($apart !== null && $apart <= 7) {
+                $score    += 1;
+                $reasons[] = 'Around the same date';
+            }
+
+            // Require more than a single coincidental signal (e.g. just being
+            // reported the same week): a real suggestion needs a category match,
+            // a shared keyword, or location + date together.
+            if ($score >= 2) {
+                $cand['match_score']   = $score;
+                $cand['match_reasons'] = $reasons;
+                $matches[] = $cand;
+            }
+        }
+
+        // Best score first; break ties by most recently posted.
+        usort($matches, function ($a, $b) {
+            return ($b['match_score'] <=> $a['match_score'])
+                ?: strcmp((string) $b['created_at'], (string) $a['created_at']);
+        });
+
+        return $this->json($response, [
+            'source'  => ['id' => (int) $source['id'], 'type' => $source['type']],
+            'matches' => array_slice($matches, 0, 5),
+        ], 200);
+    }
+
+    // POST /api/items/{id}/ai-hints   (JWT, owner only) — re-run the local
+    // "AI" location scorer on demand and return the fresh hints.
+    public function regenerateHints(Request $request, Response $response, array $args): Response
+    {
+        $userId = (int) $request->getAttribute('user_id');
+        $id     = (int) $args['id'];
+        $pdo    = Database::pdo();
+
+        $stmt = $pdo->prepare('SELECT user_id FROM items WHERE id = ?');
+        $stmt->execute([$id]);
+        $item = $stmt->fetch();
+        if (!$item) {
+            return $this->json($response, ['error' => 'Item not found.'], 404);
+        }
+        if ((int) $item['user_id'] !== $userId && $request->getAttribute('role') !== 'admin') {
+            return $this->json($response, ['error' => 'You can only refresh hints for your own item.'], 403);
+        }
+
+        try {
+            $payload = (new AiLocationService())->generateForItem($id);
+        } catch (\Throwable $e) {
+            error_log('FoundIt AI hints error (regenerate): ' . $e->getMessage());
+            return $this->json($response, ['error' => 'Could not generate location hints.'], 500);
+        }
+
+        return $this->json($response, ['ai_location_hints' => $payload], 200);
+    }
+
     // ---------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------
+
+    /**
+     * Extract validated [latitude, longitude] from the request data.
+     * Returns [null, null] when both are absent/blank; partial or out-of-range
+     * values are treated as "no point" so a bad map click never blocks a report.
+     */
+    private function coords(array $data): array
+    {
+        $lat = $data['latitude'] ?? null;
+        $lng = $data['longitude'] ?? null;
+        if ($lat === null || $lng === null || $lat === '' || $lng === '') {
+            return [null, null];
+        }
+        if (!is_numeric($lat) || !is_numeric($lng)) {
+            return [null, null];
+        }
+        $lat = (float) $lat;
+        $lng = (float) $lng;
+        if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+            return [null, null];
+        }
+        return [$lat, $lng];
+    }
 
     /** Validate item input; returns an array of field => message (empty if valid). */
     private function validate(array $data): array
@@ -230,7 +496,72 @@ class ItemController
              WHERE i.id = ?'
         );
         $stmt->execute([$id]);
-        return $this->json($response, ['item' => $stmt->fetch()], $status);
+        return $this->json($response, ['item' => $this->hydrate($stmt->fetch())], $status);
+    }
+
+    /** Decode the stored ai_location_hints JSON into an object for the client. */
+    private function hydrate($item)
+    {
+        if (is_array($item) && array_key_exists('ai_location_hints', $item)) {
+            $decoded = json_decode((string) $item['ai_location_hints'], true);
+            $item['ai_location_hints'] = is_array($decoded) ? $decoded : null;
+        }
+        return $item;
+    }
+
+    /** Absolute path to the public uploads directory. */
+    private function uploadsDir(): string
+    {
+        $root = $_SERVER['DOCUMENT_ROOT'] ?? (__DIR__ . '/../../public');
+        return rtrim($root, "/\\") . '/uploads';
+    }
+
+    /** Delete a previously stored image (best-effort, stays inside the uploads dir). */
+    private function deleteImageFile(string $imagePath): void
+    {
+        $full = $this->uploadsDir() . '/' . basename($imagePath);
+        if (is_file($full)) {
+            @unlink($full);
+        }
+    }
+
+    /**
+     * Break free text into a de-duplicated set of lowercase keywords,
+     * dropping very short tokens and common stop-words. Powers the
+     * smart match-suggestion scoring (Feature #3).
+     */
+    private function keywords(?string $text): array
+    {
+        $text  = mb_strtolower((string) $text);
+        $words = preg_split('/[^a-z0-9]+/u', $text, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        static $stop = ['the', 'and', 'for', 'with', 'near', 'around', 'somewhere', 'some',
+                        'this', 'that', 'has', 'have', 'had', 'was', 'from', 'your', 'you',
+                        'its', 'found', 'lost', 'left', 'item', 'about'];
+
+        $out = [];
+        foreach ($words as $w) {
+            if (mb_strlen($w) < 3 || in_array($w, $stop, true)) {
+                continue;
+            }
+            $out[$w] = true;   // key de-dupes
+        }
+        return array_keys($out);
+    }
+
+    /** Whole days between two dates, or null if either is missing/unparseable. */
+    private function daysApart(?string $d1, ?string $d2): ?int
+    {
+        if (!$d1 || !$d2) {
+            return null;
+        }
+        try {
+            $a = new \DateTime($d1);
+            $b = new \DateTime($d2);
+        } catch (\Throwable $e) {
+            return null;
+        }
+        return (int) floor(abs($a->getTimestamp() - $b->getTimestamp()) / 86400);
     }
 
     private function json(Response $r, array $data, int $status = 200): Response

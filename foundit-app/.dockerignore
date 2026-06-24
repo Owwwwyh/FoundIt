@@ -1,0 +1,9 @@
+# Rebuilt inside the image / not needed in the build context.
+node_modules
+dist
+.git
+.gitignore
+.dockerignore
+.vercel
+.env.local
+*.md

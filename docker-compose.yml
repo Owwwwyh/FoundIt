@@ -1,0 +1,57 @@
+# FoundIt — full local stack: database + PHP API + Vue frontend.
+#
+#   Start everything:   docker compose up --build
+#   Open the app:       http://localhost:8080
+#   API (raw JSON):     http://localhost:8081/api/items
+#   Stop:               docker compose down        (add -v to also wipe the DB)
+#
+# Logins (seeded by schema.sql):  aisha@example.com / password123
+#                                 admin@example.com / password123
+
+services:
+  db:
+    image: mariadb:10.11
+    container_name: foundit-db
+    environment:
+      MARIADB_ROOT_PASSWORD: foundit_root_pw
+      MARIADB_DATABASE: foundit
+    ports:
+      - "3307:3306"            # host 3307 avoids clashing with local MySQL/XAMPP on 3306
+    volumes:
+      # schema.sql self-creates the database + seeds sample data on first boot
+      - ./foundit-api/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - foundit_db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: ./foundit-api
+    container_name: foundit-api
+    ports:
+      - "8081:80"
+    depends_on:
+      db:
+        condition: service_healthy   # wait until the DB is seeded & ready
+    volumes:
+      - foundit_uploads:/var/www/html/public/uploads
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./foundit-app
+      args:
+        # The API URL the browser will call (the api container, published on the host).
+        VITE_API_BASE: http://localhost:8081/api
+    container_name: foundit-web
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  foundit_db:        # persists MySQL data between runs
+  foundit_uploads:   # persists uploaded item photos

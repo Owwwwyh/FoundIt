@@ -2,16 +2,48 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import http from '../api/http'
+import LocationMap from '../components/LocationMap.vue'
 
 const router = useRouter()
 const form = ref({
   title: '', category: '', type: '', location: '', description: '',
   date_reported: new Date().toISOString().slice(0, 10)
 })
+
+// The point chosen on the campus map ({ lat, lng } | null).
+const point = ref(null)
+function clearPoint() { point.value = null }
 const categories = ['Electronics', 'Documents', 'Keys', 'Clothing', 'Other']
 const errors = ref({})
 const serverError = ref('')
 const loading = ref(false)
+
+const imageFile = ref(null)
+const imagePreview = ref('')
+
+function onFile(e) {
+  const f = e.target.files && e.target.files[0]
+  errors.value = { ...errors.value, image: '' }
+  if (!f) { imageFile.value = null; imagePreview.value = ''; return }
+  if (!f.type.startsWith('image/')) {
+    errors.value = { ...errors.value, image: 'Please choose an image file.' }
+    imageFile.value = null; imagePreview.value = ''; e.target.value = ''
+    return
+  }
+  if (f.size > 2 * 1024 * 1024) {
+    errors.value = { ...errors.value, image: 'Image must be 2 MB or smaller.' }
+    imageFile.value = null; imagePreview.value = ''; e.target.value = ''
+    return
+  }
+  imageFile.value = f
+  imagePreview.value = URL.createObjectURL(f)
+}
+
+function clearImage() {
+  imageFile.value = null
+  imagePreview.value = ''
+  errors.value = { ...errors.value, image: '' }
+}
 
 function validate() {
   const e = {}
@@ -29,8 +61,26 @@ async function submit() {
   loading.value = true
   try {
     // JWT is attached automatically by the axios interceptor
-    const { data } = await http.post('/items', form.value)
-    router.push(`/items/${data.item.id}`)
+    const payload = {
+      ...form.value,
+      latitude: point.value ? point.value.lat : null,
+      longitude: point.value ? point.value.lng : null
+    }
+    const { data } = await http.post('/items', payload)
+    const id = data.item.id
+
+    // If a photo was chosen, upload it to the new item (best-effort)
+    if (imageFile.value) {
+      try {
+        const fd = new FormData()
+        fd.append('image', imageFile.value)
+        await http.post(`/items/${id}/image`, fd)
+      } catch (e) {
+        // The item is already created; don't lose it if only the photo failed
+        console.warn('Photo upload failed:', e.response?.data || e.message)
+      }
+    }
+    router.push(`/items/${id}`)
   } catch (err) {
     if (err.response?.data?.errors) errors.value = err.response.data.errors
     else serverError.value = 'Could not save the item.'
@@ -91,8 +141,29 @@ async function submit() {
       </div>
 
       <div class="field">
+        <label>Pin it on the campus map <span class="opt">(optional)</span></label>
+        <p class="map-hint muted small">Tap the map to drop a pin where the item was lost or found — drag it to fine-tune.</p>
+        <LocationMap v-model="point" :editable="true" height="300px" />
+        <div class="map-meta">
+          <span v-if="point" class="coords">📍 {{ point.lat.toFixed(5) }}, {{ point.lng.toFixed(5) }}</span>
+          <span v-else class="muted small">No pin placed yet.</span>
+          <button v-if="point" type="button" class="btn btn-ghost btn-sm" @click="clearPoint">Clear pin</button>
+        </div>
+      </div>
+
+      <div class="field">
         <label>Description <span class="opt">(optional)</span></label>
         <textarea v-model="form.description" rows="3" placeholder="Any extra detail that helps identify it…"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Photo <span class="opt">(optional · JPG/PNG/WEBP/GIF, max 2 MB)</span></label>
+        <input type="file" accept="image/*" class="file-input" @change="onFile" />
+        <p v-if="errors.image" class="err">{{ errors.image }}</p>
+        <div v-if="imagePreview" class="img-preview">
+          <img :src="imagePreview" alt="Selected photo preview" />
+          <button type="button" class="btn btn-ghost btn-sm" @click="clearImage">Remove photo</button>
+        </div>
       </div>
 
       <p v-if="serverError" class="err">{{ serverError }}</p>
@@ -118,6 +189,17 @@ async function submit() {
 .chip-dot.lost{ background:var(--lost); }
 .chip-dot.found{ background:var(--found); }
 .opt{ color:var(--ink-2); font-weight:400; font-size:.82rem; }
+.file-input{ padding:10px 12px; border:1.5px dashed var(--line-2); border-radius:11px; background:var(--paper);
+  font-size:.9rem; cursor:pointer; }
+.file-input::file-selector-button{ font-family:var(--font-body); font-weight:600; font-size:.85rem; cursor:pointer;
+  border:1px solid var(--line-2); background:var(--card); color:var(--ink); padding:7px 12px; border-radius:8px; margin-right:12px; }
+.img-preview{ margin-top:12px; display:flex; align-items:flex-end; gap:14px; }
+.img-preview img{ width:140px; height:140px; object-fit:contain; background:var(--paper-2); border-radius:12px;
+  border:1px solid var(--line); box-shadow:var(--shadow-sm); }
 .btn-submit{ margin-top:6px; padding:13px; }
+.map-hint{ margin:0 0 10px; }
+.map-meta{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; }
+.coords{ font-weight:600; font-size:.86rem; color:var(--ink); background:var(--paper-2);
+  padding:5px 11px; border-radius:9px; }
 @media (max-width:520px){ .grid-2{ grid-template-columns:1fr; } }
 </style>

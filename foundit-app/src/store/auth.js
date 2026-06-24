@@ -7,7 +7,8 @@ export const useAuthStore = defineStore('auth', {
   }),
   getters: {
     isLoggedIn: (state) => !!state.token,
-    userId: (state) => (state.user ? state.user.id : null)
+    userId: (state) => (state.user ? state.user.id : null),
+    isAdmin: (state) => state.user?.role === 'admin'
   },
   actions: {
     // Store the JWT + the logged-in user (called after a successful login)

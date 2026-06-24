@@ -1,12 +1,33 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import http from '../api/http'
+import { ref, computed, onMounted } from 'vue'
+import http, { imageUrl } from '../api/http'
 
 const items = ref([])
 const loading = ref(false)
 const error = ref('')
 const filters = ref({ type: '', category: '', search: '' })
 const categories = ['Electronics', 'Documents', 'Keys', 'Clothing', 'Other']
+
+// ---- "Most lost" podium ------------------------------------------------
+const podium = ref([])
+
+const PLACES = [
+  { title: '1st place',     medal: '🥇', cls: 'p1', order: 2 },
+  { title: '1st runner-up', medal: '🥈', cls: 'p2', order: 1 },
+  { title: '2nd runner-up', medal: '🥉', cls: 'p3', order: 3 },
+]
+const podiumOrdered = computed(() =>
+  podium.value.map((entry, i) => ({ ...entry, ...PLACES[i] }))
+)
+
+async function loadPodium() {
+  try {
+    const { data } = await http.get('/lost-leaderboard')
+    podium.value = data.podium || []
+  } catch (e) {
+    podium.value = []
+  }
+}
 
 async function loadItems() {
   loading.value = true
@@ -38,7 +59,7 @@ function formatDate(d) {
   return dt.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-onMounted(loadItems)
+onMounted(() => { loadItems(); loadPodium() })
 </script>
 
 <template>
@@ -60,6 +81,31 @@ onMounted(loadItems)
       <path d="M12 21s7-5.686 7-11a7 7 0 1 0-14 0c0 5.314 7 11 7 11Z" stroke="currentColor" stroke-width="1.4"/>
       <circle cx="12" cy="10" r="2.6" stroke="currentColor" stroke-width="1.4"/>
     </svg>
+  </section>
+
+  <!-- "Most lost" podium -->
+  <section v-if="podium.length" class="podium-sec">
+    <div class="podium-head">
+      <h2>Most lost on campus</h2>
+      <p class="muted">The things students lose the most — mind these on your way out.</p>
+    </div>
+    <div class="podium">
+      <div
+        v-for="p in podiumOrdered"
+        :key="p.category"
+        class="pod"
+        :class="p.cls"
+        :style="{ order: p.order }"
+      >
+        <span class="medal">{{ p.medal }}</span>
+        <span class="pod-cat">{{ p.category }}</span>
+        <span class="pod-count">{{ p.count }}</span>
+        <span class="pod-count-l muted">lost</span>
+        <div class="block">
+          <span class="place">{{ p.title }}</span>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- Filter bar -->
@@ -106,6 +152,9 @@ onMounted(loadItems)
     <p class="results-head muted">{{ items.length }} item<span v-if="items.length !== 1">s</span> reported</p>
     <div class="grid">
       <router-link v-for="item in items" :key="item.id" :to="`/items/${item.id}`" class="card">
+        <div v-if="item.image_path" class="card-photo">
+          <img :src="imageUrl(item.image_path)" :alt="item.title" loading="lazy" />
+        </div>
         <div class="card-top">
           <span class="badge" :class="item.type">{{ item.type }}</span>
           <span class="status" :class="item.status">{{ item.status }}</span>
@@ -133,6 +182,31 @@ onMounted(loadItems)
 .btn-lg{ padding:14px 24px; font-size:1rem; border-radius:14px; position:relative; z-index:1; white-space:nowrap; }
 .hero-deco{ position:absolute; right:-30px; bottom:-46px; width:230px; height:230px; color:var(--brand); opacity:.06; pointer-events:none; }
 
+/* "Most lost" podium */
+.podium-sec{ margin:28px 0 4px; }
+.podium-head{ text-align:center; margin-bottom:18px; }
+.podium-head h2{ margin:0 0 4px; }
+.podium{ display:flex; justify-content:center; align-items:flex-end; gap:14px; max-width:640px; margin:0 auto; }
+.pod{ flex:1; max-width:200px; display:flex; flex-direction:column; align-items:center; text-align:center; }
+.medal{ font-size:1.9rem; line-height:1; }
+.pod-cat{ font-weight:700; color:var(--ink); margin-top:6px; font-size:.96rem; }
+.pod-count{ font-family:var(--font-display); font-size:1.7rem; line-height:1.1; color:var(--brand); margin-top:2px; }
+.pod-count-l{ font-size:.72rem; text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px; }
+.block{ width:100%; border-radius:12px 12px 0 0; display:flex; align-items:center; justify-content:center;
+  border:1px solid var(--line); border-bottom:none; box-shadow:var(--shadow-sm); }
+.place{ font-size:.78rem; font-weight:700; padding:8px 6px; }
+.pod.p1 .block{ height:96px; background:linear-gradient(180deg,#FBE9A7,#F4D35E); }
+.pod.p1 .place{ color:#7a5b00; }
+.pod.p2 .block{ height:70px; background:linear-gradient(180deg,#EDEFF2,#D6DBE0); }
+.pod.p2 .place{ color:#566; }
+.pod.p3 .block{ height:52px; background:linear-gradient(180deg,#F0D7BE,#E0B891); }
+.pod.p3 .place{ color:#7a4a1e; }
+@media (max-width:560px){
+  .podium{ gap:8px; }
+  .pod-count{ font-size:1.35rem; }
+  .medal{ font-size:1.5rem; }
+}
+
 .seg{ display:inline-flex; background:var(--paper); border:1px solid var(--line-2); border-radius:10px; padding:3px; }
 .seg button{ border:none; background:transparent; padding:9px 16px; border-radius:8px; font-family:var(--font-body);
   font-weight:600; font-size:.88rem; color:var(--ink-2); cursor:pointer; transition:all .15s; }
@@ -140,6 +214,9 @@ onMounted(loadItems)
 .seg button.active{ background:var(--brand); color:#fff; box-shadow:var(--shadow-sm); }
 
 .results-head{ margin:0 0 14px; font-weight:600; font-size:.9rem; }
+
+.card-photo{ margin:-2px 0 12px; border-radius:10px; overflow:hidden; height:160px; background:var(--paper-2); }
+.card-photo img{ width:100%; height:100%; object-fit:contain; display:block; }
 
 .skel{ background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:18px; box-shadow:var(--shadow-sm); }
 .skel-line{ height:12px; border-radius:6px; margin:9px 0;
